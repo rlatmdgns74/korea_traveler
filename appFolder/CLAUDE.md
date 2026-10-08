@@ -30,6 +30,25 @@
 
 ---
 
+## 작업 방식 (2026-10-08 사용자 지정 — 모든 세션에서 따른다)
+
+1. 모든 작업은 이 컴퓨터의 로컬 폴더(`C:\NewBusiness\appFolder`)에서 진행한다.
+   (git 저장소의 루트는 한 단계 위인 `C:\NewBusiness` 이고, `tools/`·`backup/`·`README.md` 도 같은 저장소에 들어 있다.)
+2. 작업 단위가 끝나면 로컬 git에 커밋한다. 커밋 메시지는 **한국어**로, 무엇을 바꿨는지 알 수 있게 쓴다.
+3. GitHub에 올리는 것(`git push`)은 사용자가 **"GitHub에 올려줘"라고 말할 때만** 한다. 스스로 판단해서 올리지 않는다.
+4. 올려달라고 하면, 올리기 전에 **마지막으로 올린 이후 바뀐 파일 목록과 커밋 목록**을 먼저 보여주고 사용자 확인을 받은 다음 올린다.
+   - 바뀐 파일: `git diff --stat origin/main..HEAD` (커밋 안 된 변경이 있으면 `git status` 도 함께)
+   - 커밋 목록: `git log --oneline origin/main..HEAD`
+5. **apk, dist 폴더, keystore 파일, pdf는 절대 올리지 않는다.** `.gitignore`(저장소 루트)에 없으면 추가한다.
+   현재 규칙: `*.apk`, `*.aab`, `dist/`, `*.keystore`, `*.jks`, `*.pdf`
+
+실수 방지 장치: `.claude/settings.json`(저장소 루트와 appFolder 양쪽)에 `git push` 를 할 때마다
+사용자 승인을 받는 `ask` 권한 규칙 — `Bash(git push *)`, `PowerShell(git push *)` — 이 들어 있다. 지우지 않는다.
+
+- GitHub 저장소: https://github.com/rlatmdgns74/korea_traveler (비공개, 기본 브랜치 `main`)
+
+---
+
 ## 1. 서비스 개요 (지원서 기준)
 
 **한 줄:** 대한민국 전체가 거대한 게임판. 실제로 가서 GPS로 인증하면 지역이 해금되는 실사판 부루마블.

@@ -25,6 +25,9 @@ apktool.bat
 # IDE 개인 설정
 .idea/
 
+# Claude Code 개인 설정 (공유 규칙은 .claude/settings.json 에)
+.claude/settings.local.json
+
 # ---- 기타 ----
 *.idsig
 .DS_Store
