@@ -1,0 +1,2334 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  // 빌드 모드: "dev"(개발용) | "user"(일반 사용자용). 이 값 하나로 화면과 기능이 갈린다.
+  // 원본은 항상 "dev". 사용자용 APK는 tools/build-apk.sh user 가 빌드 복사본에서만 바꾼다.
+  var BUILD_MODE = "dev";
+  var APP_VERSION = "1.1.0";
+  (function(){
+    var root = document.documentElement;
+    // dev/user 가 아닌 값은 안전하게 user 로 취급
+    root.setAttribute("data-build", BUILD_MODE === "dev" ? "dev" : "user");
+    // 저장된 테마를 화면이 그려지기 전에 적용 (깜빡임 방지)
+    try{
+      var prefs = JSON.parse(localStorage.getItem("kr-traveler-prefs") || "{}");
+      if (prefs.theme === "light" || prefs.theme === "dark") root.setAttribute("data-theme", prefs.theme);
+    }catch(e){}
+  })();
+</script>
+</head>
+<body>
+<title>코리아 트래블러</title>
+<style>
+  :root{
+    --bg:#F6F1E7;
+    --paper:#FFFCF5;
+    --ink:#23283A;
+    --ink-soft:#5B5747;
+    --line:#DCD3BC;
+    --accent:#C1443A;
+    --accent-ink:#FFFFFF;
+    --unlocked:#2F7566;
+    --unlocked-soft:#DCEAE4;
+    --locked:#C9C2B2;
+    --locked-soft:#EFEAE0;
+    --gold:#B4842E;
+    --gold-soft:#F1E4C6;
+    --shadow:0 10px 30px -14px rgba(35,40,58,.28);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#161A24;
+      --paper:#1E2330;
+      --ink:#EDE8D8;
+      --ink-soft:#B4AE9B;
+      --line:#3A3F4E;
+      --accent:#E2665C;
+      --accent-ink:#1B1410;
+      --unlocked:#4FA593;
+      --unlocked-soft:#233833;
+      --locked:#3A3F4E;
+      --locked-soft:#262B38;
+      --gold:#D9B35F;
+      --gold-soft:#332B18;
+      --shadow:0 10px 34px -14px rgba(0,0,0,.55);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+      --bg:#161A24;
+      --paper:#1E2330;
+      --ink:#EDE8D8;
+      --ink-soft:#B4AE9B;
+      --line:#3A3F4E;
+      --accent:#E2665C;
+      --accent-ink:#1B1410;
+      --unlocked:#4FA593;
+      --unlocked-soft:#233833;
+      --locked:#3A3F4E;
+      --locked-soft:#262B38;
+      --gold:#D9B35F;
+      --gold-soft:#332B18;
+      --shadow:0 10px 34px -14px rgba(0,0,0,.55);
+      color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important;} /* .onboard 등 display 지정이 hidden 속성을 덮어쓰지 않게 */
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans KR', -apple-system, 'Pretendard', sans-serif;
+    padding-inline:16px;
+    /* 아래쪽은 하단 탭 바(약 60px) 높이만큼 더 비운다 */
+    padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 84px);
+    max-width:560px;
+    margin-inline:auto;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  h1,h2,h3{font-family:'Noto Serif KR', 'Noto Sans KR', serif; margin:0; text-wrap:balance;}
+  .mono{font-family:'Space Mono','Noto Sans KR',monospace;}
+  button{font:inherit; cursor:pointer;}
+  p{margin:0;}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    z-index:20;
+    background:var(--bg);
+    padding-block:10px 6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .stamp-mark{
+    width:38px; height:38px; border-radius:50%;
+    border:2px solid var(--accent); color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Noto Serif KR',serif; font-weight:700; font-size:15px;
+    transform:rotate(-8deg);
+    flex:none;
+  }
+  .brand h1{font-size:19px; line-height:1.15;}
+  .brand .sub{font-size:11px; color:var(--ink-soft); letter-spacing:.04em;}
+  .progress-pill{
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex:none;
+  }
+  .progress-pill .num{font-family:'Space Mono',monospace; font-size:15px; font-weight:700;}
+  .progress-track{width:78px; height:5px; border-radius:3px; background:var(--locked-soft); overflow:hidden;}
+  .progress-fill{height:100%; background:var(--accent); border-radius:3px; transition:width .4s ease;}
+
+  .devbar{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:11px; color:var(--ink-soft);
+  }
+  .devtoggle{
+    border:1px solid var(--line); background:var(--paper); color:var(--ink-soft);
+    border-radius:999px; padding:4px 10px; font-size:11px;
+  }
+  .devtoggle[aria-pressed="true"]{ background:var(--gold-soft); color:var(--gold); border-color:var(--gold); font-weight:700; }
+  .devpanel{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    background:var(--gold-soft); border:1px dashed var(--gold); border-radius:10px;
+    padding:8px 10px; font-size:12px; color:var(--ink);
+  }
+  .devpanel select{
+    font:inherit; padding:4px 6px; border-radius:6px; border:1px solid var(--line);
+    background:var(--paper); color:var(--ink);
+  }
+
+  /* ---------- map ---------- */
+  .map-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px;
+    padding:10px 6px 4px; box-shadow:var(--shadow);
+  }
+  svg#map{ width:100%; height:auto; display:block; }
+  .region-path{
+    stroke:var(--paper); stroke-width:1.4; cursor:pointer;
+    transition:filter .15s ease, transform .15s ease;
+    fill:var(--locked);
+  }
+  .region-path:hover{ filter:brightness(1.08); }
+  .region-path.unlocked{ fill:var(--unlocked); }
+  .region-path.home{ fill:var(--accent); }
+  .region-path.selected{ stroke:var(--ink); stroke-width:2.4; }
+  .badge-dot{ pointer-events:none; }
+
+  /* 확대해도 선 굵기는 화면 기준으로 유지 */
+  #map path{ vector-effect:non-scaling-stroke; }
+  #mapView{ transform-origin:0 0; }
+  .region-path.test-unlock{ stroke-dasharray:3 2; }
+  /* 전국: 시·도 바탕 위에 진행도만큼 해금 색을 겹치고, 하위 지역은 얇은 선으로만 보인다 */
+  .sido-path{ stroke:none; }
+  .prog-path{ fill:var(--unlocked); fill-opacity:0; pointer-events:none; transition:fill-opacity .3s ease; }
+  #map .sub-path:not(.active){ fill:transparent; stroke:var(--paper); stroke-width:.5; stroke-opacity:.75; pointer-events:none; }
+  .sub-path.active{ stroke-width:.9; pointer-events:auto; }
+  .sido-line{ fill:none; stroke:var(--paper); stroke-width:1.6; pointer-events:none; }
+  .sido-line.home-sido{ stroke:var(--accent); stroke-width:2.6; }
+  /* 확대: 대상 시·도만 또렷하게, 나머지는 흐리게 */
+  #map.zoomed .sido-path, #map.zoomed .prog-path, #map.zoomed .sido-line, #map.zoomed .sub-path:not(.active){ opacity:.28; pointer-events:none; }
+  #map.zoomed .zoom-target{ opacity:1; }
+  #map.zoomed .prog-path.zoom-target{ opacity:0; }
+  .sub-label{
+    display:none; pointer-events:none; text-anchor:middle; dominant-baseline:central;
+    font-family:'Noto Sans KR',sans-serif; font-weight:700; fill:var(--ink);
+    paint-order:stroke; stroke:var(--paper); stroke-linejoin:round;
+  }
+  .sub-label.on{ display:block; }
+  .map-bar{
+    display:flex; align-items:center; gap:6px; padding:2px 4px 8px; flex-wrap:wrap;
+  }
+  .map-bar[hidden]{ display:none; }
+  .map-back, .map-legacy, .map-list{
+    border:1.5px solid var(--line); background:var(--bg); color:var(--ink);
+    border-radius:999px; padding:6px 11px; font-size:12.5px; font-weight:700; flex:none;
+  }
+  .map-legacy{ color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
+  .map-title{ flex:1; min-width:120px; font-size:13px; font-weight:700; color:var(--ink); }
+  .swatch-prog{ background:linear-gradient(90deg, var(--locked), var(--unlocked)); width:22px; }
+  /* 하위 지역 목록 시트 */
+  .sub-list{ display:flex; flex-direction:column; gap:6px; }
+  .sub-row{ display:flex; gap:6px; }
+  .sub-row-main{
+    flex:1; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:10px;
+    padding:10px 12px; font-size:14px; font-weight:700; text-align:left;
+  }
+  .sub-row-dev{ flex:none; width:42px; border:1.5px dashed var(--gold); background:var(--gold-soft); border-radius:10px; font-size:16px; }
+  .legend-hint{ margin-left:auto; }
+  .tag-test{ background:var(--gold-soft); color:var(--gold); }
+  .tag-legacy{ background:var(--gold-soft); color:var(--gold); }
+  .btn.btn-dev{ border-style:dashed; border-color:var(--gold); color:var(--gold); background:var(--gold-soft); }
+  .devpanel select[hidden]{ display:none; }
+  footer .attrib{ font-size:10px; opacity:.8; }
+
+  /* ---------- build mode ---------- */
+  /* user 빌드: JS가 지우기 전에도 개발용 요소가 한 프레임도 보이지 않게 */
+  html[data-build="user"] [data-dev-only]{ display:none !important; }
+  .dev-badge{
+    position:fixed; z-index:90; pointer-events:none;
+    top:calc(env(safe-area-inset-top,0px) + 2px); left:2px;
+    font:700 9px/1 'Space Mono',monospace; letter-spacing:.08em;
+    padding:3px 5px; border-radius:4px;
+    background:var(--gold); color:var(--paper); opacity:.9;
+  }
+  .test-count{ font-size:11px; font-weight:700; color:var(--gold); margin-right:6px; }
+
+  /* 테스트 해금: 사선 무늬 범례 (지도는 SVG 패턴 #testHatch) */
+  .swatch-test{ background:repeating-linear-gradient(45deg, var(--unlocked) 0 3px, var(--gold) 3px 5px); }
+  .region-path.test-unlock:not(.home){ fill:url(#testHatch); }
+  #map{ touch-action:manipulation; }
+
+  /* ---------- views / tab bar ---------- */
+  .view{ display:flex; flex-direction:column; gap:16px; }
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    max-width:560px; margin-inline:auto;
+    display:flex; background:var(--paper); border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    box-shadow:0 -6px 18px -14px rgba(0,0,0,.35);
+  }
+  .tabbar button{
+    flex:1; border:none; background:none; color:var(--ink-soft);
+    padding:8px 0 10px; font-size:11.5px; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .tabbar .tab-ico{ font-size:19px; line-height:1.2; filter:grayscale(1); opacity:.7; }
+  .tabbar button[aria-selected="true"]{ color:var(--accent); }
+  .tabbar button[aria-selected="true"] .tab-ico{ filter:none; opacity:1; }
+
+  /* ---------- settings ---------- */
+  .settings-title{ font-size:20px; }
+  .set-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:16px;
+    padding:14px 14px; display:flex; flex-direction:column; gap:10px;
+  }
+  .set-card h3{ font-size:15px; }
+  .set-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px; }
+  .set-note{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; }
+  .set-note:empty{ display:none; }
+  .set-btns{ display:flex; flex-direction:column; gap:8px; }
+  .set-list{ margin:0; padding-left:18px; font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
+  .set-version{ text-align:center; font-size:11.5px; color:var(--ink-soft); }
+  .dev-section{ border:1.5px dashed var(--gold); background:var(--gold-soft); }
+  .seg{ display:flex; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; }
+  .seg button{ flex:1; border:none; background:var(--bg); color:var(--ink-soft); padding:9px 0; font-size:13px; font-weight:700; }
+  .seg button + button{ border-left:1.5px solid var(--line); }
+  .seg button[aria-checked="true"]{ background:var(--accent); color:var(--accent-ink); }
+  .btn.btn-danger{ background:var(--paper); color:var(--accent); border:1.5px solid var(--accent); } /* .btn{border:none} 보다 뒤에 정의돼 있지 않으므로 우선순위를 높인다 */
+  .perm-granted{ color:var(--unlocked); }
+  .perm-denied{ color:var(--accent); }
+  .json-box{
+    width:100%; min-height:180px; max-height:46vh; overflow:auto; margin:0;
+    font:11px/1.45 'Space Mono',monospace; white-space:pre-wrap; word-break:break-all;
+    background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:10px; padding:10px;
+  }
+  .confirm-input{
+    width:100%; border-radius:10px; border:1.5px solid var(--line); background:var(--bg); color:var(--ink);
+    padding:10px; font:inherit; font-size:14px;
+  }
+  .summary-box{ background:var(--locked-soft); border-radius:12px; padding:12px; font-size:13px; line-height:1.6; }
+  /* ---------- 도감 ---------- */
+  .view-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .view-sub{ font-size:12.5px; color:var(--ink-soft); font-weight:700; }
+  .dex-search{
+    width:100%; border-radius:12px; border:1.5px solid var(--line); background:var(--paper); color:var(--ink);
+    padding:11px 12px; font:inherit; font-size:14px;
+  }
+  .dex-list{ display:flex; flex-direction:column; gap:8px; }
+  .dex-sido{ background:var(--paper); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .dex-sido summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 14px; font-weight:700; font-size:14px;
+  }
+  .dex-sido summary::-webkit-details-marker{ display:none; }
+  .dex-sido summary::after{ content:"▾"; color:var(--ink-soft); transition:transform .15s ease; }
+  .dex-sido[open] summary::after{ transform:rotate(180deg); }
+  .dex-sido-name{ flex:1; min-width:0; }
+  .dex-bar{ width:64px; height:6px; border-radius:3px; background:var(--locked-soft); overflow:hidden; flex:none; }
+  .dex-bar i{ display:block; height:100%; background:var(--unlocked); }
+  .dex-count{ font-size:12px; color:var(--ink-soft); flex:none; min-width:44px; text-align:right; }
+  .dex-rows{ display:flex; flex-direction:column; border-top:1px solid var(--line); }
+  .dex-row{
+    display:grid; grid-template-columns:1fr auto; grid-template-areas:"name tag" "meta tag"; gap:2px 10px; align-items:center;
+    border:none; border-bottom:1px solid var(--line); background:none; color:var(--ink); text-align:left; padding:10px 14px;
+  }
+  .dex-row:last-child{ border-bottom:none; }
+  .dex-row .dex-name{ grid-area:name; font-size:14px; font-weight:700; }
+  .dex-row .dex-meta{ grid-area:meta; font-size:11.5px; color:var(--ink-soft); }
+  .dex-row .region-tag{ grid-area:tag; }
+  .dex-row:not(.done) .dex-name{ color:var(--ink-soft); }
+
+  /* ---------- 챌린지 ---------- */
+  .chal-list{ display:flex; flex-direction:column; gap:10px; }
+  .chal-card{
+    background:var(--paper); border:1.5px dashed var(--gold); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:8px;
+  }
+  .chal-card.done{ border-style:solid; background:var(--gold-soft); }
+  .chal-top{ display:flex; align-items:center; gap:10px; }
+  .chal-star{ font-size:26px; line-height:1; }
+  .chal-title{ flex:1; min-width:0; }
+  .chal-title h3{ font-size:17px; }
+  .chal-desc{ font-size:13px; color:var(--ink-soft); line-height:1.55; }
+  .chal-date{ font-size:12px; color:var(--gold); font-weight:700; }
+  /* 지도 위 챌린지 섬: 금색 점선 */
+  #map .chal-path{ fill:var(--gold-soft); stroke:var(--gold); stroke-width:1.4; stroke-dasharray:3 2; cursor:pointer; }
+  #map .chal-path.chal-done{ fill:var(--gold); stroke-dasharray:none; }
+  #map .chal-path.chal-done.test-unlock{ fill:url(#testHatch); }
+  #map.zoomed .chal-path{ opacity:1; }
+  #map .chal-hit{ fill:transparent; stroke:none; cursor:pointer; }
+
+  /* ---------- 저장 공간 초과 안내 ---------- */
+  .save-error{
+    background:var(--gold-soft); border:1.5px solid var(--accent); color:var(--ink); border-radius:12px;
+    padding:12px; font-size:13px; line-height:1.55; margin-bottom:8px;
+  }
+
+  /* ---------- 해금 도장 (전체 1.8초) ---------- */
+  .stamp-wrap{ position:fixed; inset:0; z-index:95; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+  .stamp{
+    --ink-stamp:var(--accent);
+    width:200px; height:200px; border-radius:50%; border:6px double var(--ink-stamp); color:var(--ink-stamp);
+    background:var(--paper); /* color-mix 미지원 WebView 대비 */
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; padding:18px;
+    font-family:'Noto Serif KR',serif; transform:rotate(-12deg);
+    animation:stamp-hit 1.8s cubic-bezier(.2,.9,.3,1) forwards;
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--ink-stamp) 25%, transparent) inset;
+  }
+  .stamp-test .stamp, .stamp-challenge .stamp{ --ink-stamp:var(--gold); }
+  .stamp-top{ font:700 10px/1 'Space Mono',monospace; letter-spacing:.12em; opacity:.85; }
+  .stamp-name{ font-size:24px; font-weight:700; line-height:1.15; word-break:keep-all; max-width:150px; }
+  .stamp-label{ font-size:17px; font-weight:700; border-top:2px solid var(--ink-stamp); border-bottom:2px solid var(--ink-stamp); padding:1px 10px; }
+  .stamp-date{ font:700 11px/1 'Space Mono',monospace; opacity:.85; }
+  @keyframes stamp-hit{
+    0%  { transform:rotate(-12deg) scale(2.6); opacity:0; }
+    16% { transform:rotate(-12deg) scale(.92); opacity:1; }
+    24% { transform:rotate(-12deg) scale(1.03); }
+    32% { transform:rotate(-12deg) scale(1); }
+    80% { transform:rotate(-12deg) scale(1); opacity:1; }
+    100%{ transform:rotate(-12deg) scale(1); opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .stamp{ animation:stamp-fade 1.4s ease forwards; }
+    @keyframes stamp-fade{ 0%{opacity:0} 15%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+  }
+
+  .legend{
+    display:flex; gap:14px; flex-wrap:wrap; padding:8px 10px 10px; font-size:11px; color:var(--ink-soft);
+  }
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .swatch{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+  /* ---------- onboarding ---------- */
+  .onboard{
+    background:var(--paper); border:1px solid var(--line); border-radius:18px;
+    padding:22px 18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:14px;
+  }
+  .onboard h2{font-size:22px;}
+  .onboard p{color:var(--ink-soft); font-size:13.5px; line-height:1.6;}
+  .btn{
+    border:none; border-radius:12px; padding:13px 16px; font-size:14.5px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-secondary{ background:var(--paper); color:var(--ink); border:1.5px solid var(--line); }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); text-decoration:underline; padding:8px; font-size:13px; font-weight:500;}
+  .btn:active{ transform:translateY(1px); }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .status-line{font-size:12.5px; color:var(--ink-soft); min-height:16px;}
+
+  /* ---------- sheet / modal ---------- */
+  .scrim{
+    position:fixed; inset:0; background:rgba(20,18,12,.42);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:50; padding:0;
+  }
+  .sheet{
+    width:100%; max-width:560px; background:var(--paper);
+    border-radius:20px 20px 0 0; box-shadow:var(--shadow);
+    max-height:88vh; overflow-y:auto;
+    padding:16px 18px calc(env(safe-area-inset-bottom,0px) + 18px);
+    display:flex; flex-direction:column; gap:14px;
+    animation:sheet-up .22s ease;
+  }
+  @keyframes sheet-up{ from{ transform:translateY(16px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .sheet{animation:none;} }
+  .sheet-handle{ width:36px; height:4px; border-radius:2px; background:var(--line); margin:0 auto; }
+  .sheet-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .sheet-head h2{ font-size:20px; }
+  .close-x{
+    background:var(--locked-soft); color:var(--ink-soft); border:none; border-radius:50%;
+    width:30px; height:30px; font-size:15px; flex:none;
+  }
+  .region-tag{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700;
+    padding:3px 9px; border-radius:999px; width:fit-content;
+  }
+  .tag-locked{ background:var(--locked-soft); color:var(--ink-soft); }
+  .tag-unlocked{ background:var(--unlocked-soft); color:var(--unlocked); }
+  .tag-home{ background:var(--gold-soft); color:var(--gold); }
+
+  .coord{ font-size:11px; color:var(--ink-soft); }
+
+  .divider{ height:1px; background:var(--line); border:none; margin:2px 0; }
+
+  /* mission */
+  .mission-box{
+    background:var(--locked-soft); border-radius:12px; padding:12px; font-size:13px; color:var(--ink-soft); line-height:1.55;
+  }
+  textarea{
+    width:100%; min-height:74px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--bg); color:var(--ink); padding:10px; font:inherit; font-size:13.5px; resize:vertical;
+  }
+  .file-row{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-soft); }
+  .photo-preview{ width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid var(--line); }
+
+  /* feed */
+  .feed{ display:flex; flex-direction:column; gap:10px; }
+  .post{
+    display:flex; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--bg);
+  }
+  .avatar{
+    width:34px; height:34px; border-radius:50%; background:var(--unlocked-soft); color:var(--unlocked);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex:none;
+  }
+  .post .who{ font-size:12.5px; font-weight:700; }
+  .post .when{ font-size:10.5px; color:var(--ink-soft); font-weight:400; margin-left:6px; }
+  .post .text{ font-size:13px; line-height:1.5; margin-top:2px; }
+  .post img.photo{ margin-top:6px; width:100%; max-height:160px; object-fit:cover; border-radius:8px; }
+  .empty-note{ font-size:12.5px; color:var(--ink-soft); padding:10px 2px; }
+
+  /* decorate */
+  .grid4{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+  }
+  .cell{
+    aspect-ratio:1; border-radius:10px; background:var(--locked-soft); border:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+  }
+  .cell.filled{ background:var(--unlocked-soft); border-style:solid; border-color:var(--unlocked); }
+  .palette{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pal-item{
+    width:44px; height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--bg);
+    font-size:20px; display:flex; align-items:center; justify-content:center;
+  }
+  .pal-item[aria-pressed="true"]{ border-color:var(--accent); background:var(--gold-soft); }
+  .pal-item.eraser{ font-size:14px; color:var(--ink-soft); }
+
+  .stat-row{ display:flex; gap:8px; }
+  .stat-tile{
+    flex:1; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px;
+  }
+  .stat-tile .v{ font-family:'Space Mono',monospace; font-weight:700; font-size:16px; }
+  .stat-tile .l{ font-size:10.5px; color:var(--ink-soft); }
+
+  /* toast */
+  #toast-wrap{ position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0px) + 76px); display:flex; justify-content:center; z-index:80; pointer-events:none;}
+  .toast{
+    background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:999px; font-size:13px; font-weight:600;
+    box-shadow:var(--shadow); display:flex; align-items:center; gap:8px; animation:toast-in .25s ease;
+  }
+  @keyframes toast-in{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  footer{ text-align:center; font-size:11px; color:var(--ink-soft); padding-top:4px; }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap">
+
+<header>
+  <div class="brand">
+    <div class="stamp-mark">KR</div>
+    <div>
+      <h1>코리아 트래블러</h1>
+      <div class="sub">여행하며 대한민국을 채워가는 지도</div>
+    </div>
+  </div>
+  <div class="progress-pill">
+    <div class="num"><span class="test-count" id="testCount" data-dev-only hidden></span><span id="unlockedCount">0</span><span id="unitTotal" style="color:var(--ink-soft); font-weight:400;">/33</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+</header>
+
+<div class="view" id="viewMap">
+<div class="devbar" data-dev-only>
+  <span>실제 여행이 어려울 땐 테스트 모드로 미리 체험해보세요.</span>
+  <button class="devtoggle" id="devToggle" aria-pressed="false">🧪 테스트 모드</button>
+</div>
+<div class="devpanel" id="devPanel" data-dev-only hidden>
+  <span>가상 위치:</span>
+  <select id="devSelect" aria-label="가상 위치 시·도"></select>
+  <select id="devSubSelect" aria-label="가상 위치 시·군" hidden></select>
+  <button class="btn btn-secondary" id="devApply" style="padding:6px 12px; font-size:12px;">이 위치로 이동</button>
+</div>
+
+<main id="onboard" class="onboard">
+  <h2>여행 여권을 펼쳐보세요</h2>
+  <p>
+    처음에는 현재 위치한 지역 외 <span id="lockedCountText">32</span>개 지역(시·군·구)이 모두 잠겨 있어요. 시·도를 누르면 그 안의 시·군·구를 하나씩 열 수 있어요. 실제로 그 지역에 방문해서 미션(커뮤니티 포스트 작성)을 완료하면
+    지도가 열리고, 열린 지역 위에는 나만의 가상 건물을 지어 꾸밀 수 있어요.
+  </p>
+  <button class="btn btn-primary" id="btnLocate">📍 내 위치로 시작하기</button>
+  <button class="btn btn-ghost" id="btnDevStart" data-dev-only>위치 권한 없이 테스트 모드로 시작하기</button>
+  <p class="status-line" id="onboardStatus"></p>
+</main>
+
+<section class="map-card" id="mapCard" hidden>
+  <div class="map-bar" id="mapBar" hidden>
+    <button class="map-back" id="btnZoomOut">← 전국</button>
+    <span class="map-title" id="zoomTitle"></span>
+    <button class="map-list" id="btnSubList">☰ 목록</button>
+    <button class="map-legacy" id="btnLegacy" hidden>📜 이전 기록</button>
+  </div>
+  <svg id="map" viewBox="0 0 800 760" role="img" aria-label="대한민국 지도"></svg>
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--accent)"></i>내 홈 지역</span>
+    <span><i class="swatch" style="background:var(--unlocked)"></i>잠금 해제</span>
+    <span><i class="swatch" style="background:var(--locked)"></i>잠김</span>
+    <span id="legendTest" hidden><i class="swatch swatch-test"></i>🧪 테스트 해금</span>
+    <span><i class="swatch swatch-prog"></i>시·도 진행도</span>
+    <span class="legend-hint">시·도를 누르면 시·군·구 지도로 들어가요</span>
+  </div>
+</section>
+
+<footer>실제 위치 정보는 이 기기에만 저장되며 다른 사람에게 전송되지 않아요.<br><span class="attrib">행정구역 경계: 통계청 SGIS · vuski/admdongkor (CC BY 4.0)</span></footer>
+</div>
+
+<section class="view" id="viewDex" hidden>
+  <div class="view-head">
+    <h2 class="settings-title">도감</h2>
+    <span class="view-sub mono" id="dexSummary"></span>
+  </div>
+  <input class="dex-search" id="dexSearch" type="search" placeholder="지역 이름으로 찾기 (예: 과천, 해운대)" autocomplete="off" aria-label="지역 이름으로 찾기">
+  <div class="dex-list" id="dexList"></div>
+</section>
+
+<section class="view" id="viewChal" hidden>
+  <div class="view-head">
+    <h2 class="settings-title">챌린지</h2>
+    <span class="view-sub mono" id="chalSummary"></span>
+  </div>
+  <p class="set-note">가기 쉽지 않은 특별한 섬들이에요. 전국 진행도와 따로 세고, 해금 방법은 같아요: 그 섬에서 위치를 확인하고 포스트를 남기면 성공!</p>
+  <div class="chal-list" id="chalList"></div>
+</section>
+
+<section class="view settings" id="viewSettings" hidden>
+  <h2 class="settings-title">설정</h2>
+
+  <div class="set-card">
+    <h3>위치 권한</h3>
+    <div class="set-row"><span>현재 상태</span><b id="permState">확인 중…</b></div>
+    <button class="btn btn-secondary" id="btnPermRequest">📍 위치 권한 다시 요청</button>
+    <p class="set-note" id="permNote"></p>
+  </div>
+
+  <div class="set-card">
+    <h3>화면 테마</h3>
+    <div class="seg" id="themeSeg" role="radiogroup" aria-label="화면 테마">
+      <button role="radio" data-theme-opt="system">시스템</button>
+      <button role="radio" data-theme-opt="light">라이트</button>
+      <button role="radio" data-theme-opt="dark">다크</button>
+    </div>
+  </div>
+
+  <div class="set-card">
+    <h3>데이터 백업</h3>
+    <p class="set-note">해금 기록·포스트·건물을 JSON으로 보관하거나 되돌려요. 다른 기기로 옮길 때도 써요.</p>
+    <div class="set-row"><span>기기에 저장된 기록</span><b class="mono" id="storageUsage">-</b></div>
+    <p class="set-note">사진이 많으면 앱 저장 공간(기기마다 다르며 보통 수 MB)이 가득 찰 수 있어요. 가득 차면 저장 전에 알려드리고 사진 없이 올릴 수 있게 해요.</p>
+    <div class="set-btns">
+      <button class="btn btn-secondary" id="btnExport">⬆️ 백업 내보내기</button>
+      <button class="btn btn-secondary" id="btnImport">⬇️ 백업 복원</button>
+    </div>
+  </div>
+
+  <div class="set-card">
+    <h3>기록 초기화</h3>
+    <p class="set-note">해금 기록·포스트·건물을 모두 지우고 처음부터 시작해요. 화면 테마 설정은 유지돼요.</p>
+    <button class="btn btn-danger" id="btnReset">🗑️ 기록 초기화</button>
+  </div>
+
+  <div class="set-card">
+    <h3>위치정보 안내</h3>
+    <ul class="set-list">
+      <li>위치는 지금 있는 지역을 판정할 때만 사용하고, 기기 밖으로 보내지 않아요.</li>
+      <li>지역을 해금하면 해금한 시각·좌표·위치 정확도를 이 기기에 기록해요.</li>
+      <li>정확도가 100m보다 낮으면 판정하지 않고 다시 측정을 안내해요.</li>
+      <li>백업 파일에도 해금한 위치 좌표가 들어 있으니 다른 사람에게 공유할 때 주의해주세요.</li>
+      <li>앱은 백그라운드에서 위치를 수집하지 않아요.</li>
+    </ul>
+  </div>
+
+  <div class="set-card dev-section" data-dev-only>
+    <h3>🧪 개발자</h3>
+    <div class="set-row"><span>테스트 모드</span><button class="devtoggle" id="devToggle2" aria-pressed="false">꺼짐</button></div>
+    <p class="set-note">테스트 모드에서는 지도의 지역을 두 번 탭하면 바로 해금돼요 (🧪 테스트 해금으로 기록).</p>
+    <div class="set-btns">
+      <button class="btn btn-secondary" id="btnDevUnlockAll">🔓 전체 해금</button>
+      <button class="btn btn-secondary" id="btnDevState">🧾 저장된 상태 JSON 보기</button>
+      <button class="btn btn-danger" id="btnDevWipe">💣 전체 초기화 (새로 설치한 상태)</button>
+    </div>
+  </div>
+
+  <p class="set-version">코리아 트래블러 <span class="mono" id="appVersion"></span></p>
+</section>
+
+<nav class="tabbar" role="tablist" aria-label="화면 전환">
+  <button role="tab" id="tabMap" aria-selected="true" data-tab="map"><span class="tab-ico">🗺️</span>지도</button>
+  <button role="tab" id="tabDex" aria-selected="false" data-tab="dex"><span class="tab-ico">📖</span>도감</button>
+  <button role="tab" id="tabChal" aria-selected="false" data-tab="chal"><span class="tab-ico">🏆</span>챌린지</button>
+  <button role="tab" id="tabSettings" aria-selected="false" data-tab="settings"><span class="tab-ico">⚙️</span>설정</button>
+</nav>
+
+<div class="dev-badge" id="devBadge" data-dev-only aria-hidden="true">DEV</div>
+
+<div id="toast-wrap"></div>
+
+<script src="data/sido.js"></script>
+<script src="data/sub.js"></script>
+<script src="data/challenge.js"></script>
+<script>
+(function(){
+  "use strict";
+  /* ---------------- build mode ---------------- */
+  var DEV = (typeof BUILD_MODE !== "undefined" && BUILD_MODE === "dev");
+  if (!DEV){
+    // user 빌드: 개발용 화면 요소를 숨기는 게 아니라 DOM 에서 제거한다
+    Array.prototype.forEach.call(document.querySelectorAll("[data-dev-only]"), function(el){ el.remove(); });
+  }
+  var IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+
+  var STATE_KEY = "kr-traveler-state-v4";
+  var STATE_KEY_V3 = "kr-traveler-state-v3"; // 이전 버전(전국 230곳). 지우지 않고 백업으로 남긴다.
+  var STATE_KEY_V2 = "kr-traveler-state-v2"; // 이전 버전(강원만 세분화). 지우지 않고 백업으로 남긴다.
+  var STATE_KEY_V1 = "kr-traveler-state-v1"; // 그 이전 버전(시·도 단위). 지우지 않고 백업으로 남긴다.
+  var STATE_KEY_PREV = "kr-traveler-state-v4-prev"; // 복원·초기화 직전 상태 (한 단계 되돌리기용)
+  var PREFS_KEY = "kr-traveler-prefs";              // 화면 테마 등. 게임 기록과 별도로 유지
+  var ACCURACY_LIMIT_M = 100; // 위치 정확도 기준(m). 해금 판정 기준이므로 바꿀 때는 사용자 승인 (CLAUDE.md §5)
+  var NEAREST_KM = 2;         // 경계 단순화 보정: 다각형 밖이어도 이 거리 안이면 가장 가까운 지역으로 판정
+  var GRID_N = 4; // 4x4 decorate grid
+  var BUILDINGS = [
+    {id:"house", icon:"🏠", name:"집"},
+    {id:"landmark", icon:"🏯", name:"랜드마크"},
+    {id:"cafe", icon:"☕", name:"카페"},
+    {id:"park", icon:"🌳", name:"공원"},
+    {id:"tower", icon:"🏢", name:"타워"},
+    {id:"plaza", icon:"⛲", name:"광장"},
+    {id:"market", icon:"🏮", name:"시장"},
+    {id:"temple", icon:"⛩️", name:"사찰"}
+  ];
+  var SEED_NAMES = ["여행자민지","길위의준호","떠도는하늘","지도채우기","가을바람","나침반유리"];
+
+  function seedPosts(code){
+    // deterministic-ish pseudo random pick based on code so it's stable across renders
+    var seedTexts = [
+      "여기 야경 진짜 최고예요 🌃 다들 꼭 들러보세요!",
+      "로컬 맛집 하나 발견! 다음에 또 오고 싶다 😋",
+      "미션 완료 도장 쾅! 다음 지역으로 출발합니다 🧭",
+      "생각보다 볼거리가 많아서 놀랐어요.",
+      "날씨 좋은 날 산책하기 딱이었어요 ☀️"
+    ];
+    var n = 1 + (parseInt(code,10) % 2);
+    var out = [];
+    for (var i=0;i<n;i++){
+      var idx = (parseInt(code,10)+i) % seedTexts.length;
+      var who = SEED_NAMES[(parseInt(code,10)+i*3) % SEED_NAMES.length];
+      out.push({who:who, text:seedTexts[idx], when:"예시", seed:true});
+    }
+    return out;
+  }
+
+  /* ---------------- regions ----------------
+     MAP_SIDO (data/sido.js) : 시·도 16개. 하위 지역이 있는 시·도는 sub:1
+     MAP_SUB[시·도코드] (data/sub.js) : 하위 지역 153개 (도의 시·군, 일반구는 시로 묶음, 옛 광주 5개 구는 '광주' 1곳)
+     MAP_CHALLENGE (data/challenge.js) : 챌린지 6개 (울릉도·독도·서해5도). 일반 진행도와 따로 센다
+     해금 단위(unit) = 하위 지역 153 + 시·도 그대로 7(특별·광역시 6 + 세종) = 160
+     좌표는 d4 인코딩(경위도×1e4 정수, 링마다 첫 점 절대값 + 이후 차이)이라 시작할 때 풀어 쓴다 */
+  function decodePolys(enc){
+    var polys = [];
+    for (var p=0;p<enc.length;p++){
+      var rings = [];
+      for (var r=0;r<enc[p].length;r++){
+        var a = enc[p][r], ring = [], x = 0, y = 0;
+        for (var i=0;i<a.length;i+=2){ x += a[i]; y += a[i+1]; ring.push([x/1e4, y/1e4]); }
+        rings.push(ring);
+      }
+      polys.push(rings);
+    }
+    return polys;
+  }
+  var REG = {};       // code -> region
+  var SIDO = MAP_SIDO.regions;
+  var UNITS = [];
+  SIDO.forEach(function(s){
+    s.polys = decodePolys(s.p); delete s.p;
+    REG[s.code] = s;
+    var sub = (s.sub && MAP_SUB[s.code]) ? MAP_SUB[s.code].regions : null;
+    if (sub){
+      s.children = sub;
+      sub.forEach(function(c){ c.polys = decodePolys(c.p); delete c.p; REG[c.code] = c; UNITS.push(c); });
+    } else {
+      UNITS.push(s);
+    }
+  });
+  var TOTAL_UNITS = UNITS.length;
+  var CHALLENGES = MAP_CHALLENGE.regions;
+  CHALLENGES.forEach(function(c){ c.polys = decodePolys(c.p); delete c.p; c.challenge = true; REG[c.code] = c; });
+  var METRO_CODES = { "11":1, "26":1, "27":1, "28":1, "30":1, "31":1 };      // 군까지 통째로 1곳인 특별·광역시
+  var GWANGJU_GU = { "12210":1, "12240":1, "12270":1, "12300":1, "12330":1 }; // 옛 광주 5개 구 → 광주(12000)
+
+  function regionByCode(code){ return REG[code] || null; }
+  function isUnit(code){ var r = REG[code]; return !!r && !r.children && !r.challenge; }
+  function fullName(r){
+    if (!r) return "";
+    return r.parent ? REG[r.parent].name+" "+r.name : r.name;
+  }
+  // 시트 제목 아래 한 줄: "경기도 · 수원시" 대신 소속 시·도 + (있으면) 영문명
+  function regionSubtitle(r){
+    var parts = [];
+    if (r.challenge) parts.push("🏆 챌린지");
+    if (r.parent) parts.push(REG[r.parent].name);
+    if (r.name_eng) parts.push(r.name_eng);
+    return parts.join(" · ");
+  }
+
+  /* ---------------- state ----------------
+     v3 = { version:3, home, unlocks{code:{at,lon,lat,acc,test,via}}, posts{}, buildings{}, legacy{} }
+     하위 지역이 있는 시·도 코드로 남은 포스트·건물은 그 시·도의 "📜 이전 기록"(legacy)으로 보여준다. */
+  function emptyState(){ return { version:4, home:null, unlocks:{}, posts:{}, buildings:{}, legacy:{} }; }
+
+  // v1 시·도 코드(통계청 옛 코드) -> 지금 코드 (광주 24 는 전남광주 안의 '광주' 1곳 12000 으로)
+  var V1_CODE_MAP = {
+    "11":"11","21":"26","22":"27","23":"28","24":"12000","25":"30","26":"31","29":"36",
+    "31":"41","32":"51","33":"43","34":"44","35":"52","36":"12","37":"47","38":"48","39":"50"
+  };
+  function placedCount(grid){ return (grid||[]).filter(Boolean).length; }
+
+  // v1 → 현재(v4). v1 은 시·도 단위 해금이고 좌표가 없다 → 하위 지역은 잠근 채 시·도의 이전 기록으로 보존 (선택지 A)
+  function migrateV1(v1){
+    var s = emptyState();
+    s.migratedFrom = "v1";
+    var oldUnlocked = v1.unlocked || [];
+    oldUnlocked.forEach(function(oldCode){
+      var code = V1_CODE_MAP[oldCode];
+      if (!code) return;
+      if (REG[code] && REG[code].children){
+        s.legacy[code] = s.legacy[code] || { from:"v1", oldCode:oldCode };
+        return;
+      }
+      if (!s.unlocks[code]) s.unlocks[code] = { at:null, lon:null, lat:null, acc:null, test:false, via:"v1" };
+    });
+    if (v1.home && V1_CODE_MAP[v1.home]) s.home = V1_CODE_MAP[v1.home];
+
+    // 포스트: 광주(24)+전남(36)처럼 합쳐지는 지역은 이어 붙인다
+    Object.keys(v1.posts || {}).forEach(function(oldCode){
+      var code = V1_CODE_MAP[oldCode];
+      if (!code) return;
+      s.posts[code] = (s.posts[code] || []).concat(v1.posts[oldCode] || []);
+    });
+    // 건물: 한 칸 격자라 합칠 수 없다 → 더 많이 지은 쪽을 쓰고 나머지는 legacy 에 보존
+    Object.keys(v1.buildings || {}).forEach(function(oldCode){
+      var code = V1_CODE_MAP[oldCode];
+      if (!code) return;
+      var grid = v1.buildings[oldCode];
+      var cur = s.buildings[code];
+      if (!cur){ s.buildings[code] = grid; return; }
+      var keep = placedCount(grid) > placedCount(cur) ? grid : cur;
+      var spare = keep === grid ? cur : grid;
+      s.buildings[code] = keep;
+      s.legacy[code] = s.legacy[code] || { from:"v1" };
+      s.legacy[code].spareBuildings = (s.legacy[code].spareBuildings || []).concat([spare]);
+    });
+    return s;
+  }
+
+  // v2 → 현재(v4). v2 는 강원만 시·군, 나머지는 시·도 단위였다.
+  //  - 강원 시·군·세종 해금: 코드가 같으므로 그대로
+  //  - 시·도 단위 해금 + 좌표 있음(GPS·가상 위치·더블 탭): 그 좌표가 속한 하위 지역을 해금 (테스트 표시·방식 유지)
+  //  - 시·도 단위 해금 + 좌표 없음(v1 에서 넘어온 것): 하위 지역은 잠그고 이전 기록으로 보존 (선택지 A)
+  //  - 시·도 코드의 포스트·건물: 어느 하위 지역 것인지 알 수 없으므로 그대로 두고 이전 기록으로 보여준다
+  function migrateV2(v2){
+    var s = emptyState();
+    s.migratedFrom = "v2";
+    s.posts = v2.posts || {};
+    s.buildings = v2.buildings || {};
+    s.legacy = v2.legacy || {};
+    var homeMapped = null;
+    Object.keys(v2.unlocks || {}).forEach(function(code){
+      var u = v2.unlocks[code], r = REG[code];
+      if (!r || !r.children){ s.unlocks[code] = u; return; }
+      var lg = s.legacy[code] = s.legacy[code] || { from:"v2" };
+      if (u && typeof u.lon === "number" && typeof u.lat === "number"){
+        var sub = findIn(r.children, u.lon, u.lat) || nearestIn(r.children, u.lon, u.lat);
+        if (!sub){ var ch = findIn(CHALLENGES, u.lon, u.lat); if (ch && !s.unlocks[ch.code]) s.unlocks[ch.code] = u; } // 울릉·독도 좌표 → 챌린지
+        if (sub){
+          lg.mappedTo = sub.code;
+          if (!s.unlocks[sub.code]){
+            var copy = {}; Object.keys(u).forEach(function(k){ copy[k] = u[k]; });
+            copy.migrated = "v2-sido";
+            s.unlocks[sub.code] = copy;
+          }
+          if (code === v2.home) homeMapped = sub.code;
+        }
+      }
+    });
+    Object.keys(s.posts).concat(Object.keys(s.buildings)).forEach(function(code){
+      var r = REG[code];
+      if (r && r.children && !s.legacy[code]) s.legacy[code] = { from:"v2" };
+    });
+    s.home = homeMapped || v2.home || null;
+    return s;
+  }
+
+  // v3 → v4. v3 는 광역시가 구·군 단위, 옛 광주가 5개 구, 울릉군이 일반 지역이었다.
+  //  - 광역시의 구·군 코드 → 그 광역시(시·도 코드) / 옛 광주 구 → 광주(12000)
+  //  - 울릉군(47940) → 챌린지: 좌표가 독도 안이면 독도, 아니면 울릉도
+  //  - 같은 곳으로 합쳐지면: 해금은 실제(비테스트) 기록을 우선, 그다음 이른 시각. 포스트는 이어 붙이고,
+  //    건물 격자는 더 많이 지은 쪽을 쓰고 나머지는 legacy[코드].spareBuildings 에 보존
+  //  - 좌표가 없어 legacy 로만 남았던 광역시 해금(v1)은, 이제 광역시가 다시 1곳이 되므로 해금으로 되살린다
+  function remapV3Code(code, u){
+    var r = REG[code];
+    if (r && (isUnit(code) || r.challenge || r.children)) return code;
+    if (GWANGJU_GU[code]) return "12000";
+    if (code === "47940"){
+      var c = (u && typeof u.lon === "number") ? (findIn([REG.c_dokdo], u.lon, u.lat) || nearestIn([REG.c_dokdo], u.lon, u.lat)) : null;
+      return c ? "c_dokdo" : "c_ulleungdo";
+    }
+    if (code.length === 5 && METRO_CODES[code.slice(0,2)]) return code.slice(0,2);
+    return code;
+  }
+  function betterUnlock(a, b){
+    if (!a) return b; if (!b) return a;
+    if (!!a.test !== !!b.test) return a.test ? b : a;   // 실제 해금 우선
+    if (a.at == null) return b; if (b.at == null) return a;
+    return a.at <= b.at ? a : b;                         // 먼저 해금한 기록
+  }
+  function migrateV3(v3){
+    var s = emptyState();
+    s.migratedFrom = "v3";
+    s.legacy = v3.legacy || {};
+    Object.keys(v3.unlocks || {}).forEach(function(code){
+      var u = v3.unlocks[code], to = remapV3Code(code, u);
+      var pick = betterUnlock(s.unlocks[to], u);
+      if (to !== code && pick === u){ var copy = {}; Object.keys(u).forEach(function(k){ copy[k] = u[k]; }); copy.mergedFrom = code; pick = copy; }
+      s.unlocks[to] = pick;
+    });
+    Object.keys(v3.posts || {}).forEach(function(code){
+      var to = remapV3Code(code, null);
+      s.posts[to] = (s.posts[to] || []).concat(v3.posts[code] || []);
+    });
+    Object.keys(v3.buildings || {}).forEach(function(code){
+      var to = remapV3Code(code, null), grid = v3.buildings[code], cur = s.buildings[to];
+      if (!cur){ s.buildings[to] = grid; return; }
+      var keep = placedCount(grid) > placedCount(cur) ? grid : cur;
+      s.buildings[to] = keep;
+      s.legacy[to] = s.legacy[to] || { from:"v3" };
+      s.legacy[to].spareBuildings = (s.legacy[to].spareBuildings || []).concat([keep === grid ? cur : grid]);
+    });
+    Object.keys(s.legacy).forEach(function(code){
+      if (!METRO_CODES[code]) return;
+      if (!s.unlocks[code]) s.unlocks[code] = { at:null, lon:null, lat:null, acc:null, test:false, via:"v1", restored:true };
+      if (!s.legacy[code].spareBuildings) delete s.legacy[code]; // 광역시는 이제 확대 화면이 없으므로 이전 기록 표시가 필요 없다
+    });
+    var home = v3.home ? remapV3Code(v3.home, v3.unlocks && v3.unlocks[v3.home]) : null;
+    s.home = (home && REG[home] && REG[home].challenge) ? REG[home].parent : home; // 챌린지는 홈이 될 수 없다
+    return s;
+  }
+
+  function normalizeState(s){
+    if (!s || typeof s !== "object" || s.version !== 4) s = emptyState();
+    s.unlocks = s.unlocks || {};
+    s.posts = s.posts || {};
+    s.buildings = s.buildings || {};
+    s.legacy = s.legacy || {};
+    return s;
+  }
+  // 어떤 버전의 상태든 v4 로 맞춘다 (불러오기·백업 복원 공용)
+  function upgradeState(s){
+    if (s && s.version === 4) return normalizeState(s);
+    if (s && s.version === 3) return normalizeState(migrateV3(s));
+    if (s && s.version === 2) return normalizeState(migrateV2(s));
+    if (s && Array.isArray(s.unlocked)) return normalizeState(migrateV1(s));
+    throw new Error("format");
+  }
+  function loadState(){
+    var keys = [STATE_KEY, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1];
+    for (var i=0;i<keys.length;i++){
+      try{
+        var raw = localStorage.getItem(keys[i]);
+        if (!raw) continue;
+        var s = upgradeState(JSON.parse(raw));
+        if (i > 0){ try{ localStorage.setItem(STATE_KEY, JSON.stringify(s)); }catch(e){} } // 이전 키는 지우지 않는다
+        return s;
+      }catch(e){}
+    }
+    return emptyState();
+  }
+  // 저장 실패(대부분 저장 공간 초과)를 조용히 넘기지 않는다: 호출한 쪽이 되돌리고 사용자에게 알린다
+  function saveStateQuiet(){
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(state)); return true; }
+    catch(e){ return false; }
+  }
+  function saveState(){
+    if (saveStateQuiet()) return true;
+    toast("기기 저장 공간이 부족해 저장하지 못했어요. 설정에서 백업을 내보낸 뒤 사진을 줄여주세요", "⚠️");
+    return false;
+  }
+  // 저장 공간 사용량 (localStorage 는 문자열을 UTF-16 으로 저장하므로 글자 수 × 2 로 어림한다)
+  function storageUsageBytes(){
+    var n = 0;
+    try{ for (var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); n += (k.length + (localStorage.getItem(k) || "").length) * 2; } }catch(e){}
+    return n;
+  }
+  var state = (window.claude && window.claude.hot && window.claude.hot.data) ? normalizeState(window.claude.hot.data) : loadState();
+
+  if (window.claude && window.claude.hot && window.claude.hot.snapshot){
+    window.claude.hot.snapshot(function(){ return state; });
+  }
+
+  function isUnlocked(code){ return !!state.unlocks[code]; }
+  function unlockedUnitCount(){
+    var n = 0;
+    for (var i=0;i<UNITS.length;i++) if (isUnlocked(UNITS[i].code)) n++;
+    return n;
+  }
+  function childUnlockedCount(sidoR){
+    var n = 0;
+    (sidoR.children||[]).forEach(function(c){ if (isUnlocked(c.code)) n++; });
+    return n;
+  }
+  // via: "gps"(실제 위치 + 미션) | "sim"(가상 위치 + 미션) | "dbltap"(더블 탭) | "dev-all"(전체 해금) | "v1"(이전 버전)
+  function recordUnlock(code, pos){
+    if (state.unlocks[code]) return;
+    var c = pos && pos.coords;
+    var simulated = !!(pos && pos.simulated);
+    state.unlocks[code] = {
+      at: Date.now(),
+      lon: c ? c.longitude : null,
+      lat: c ? c.latitude : null,
+      acc: (c && typeof c.accuracy === "number") ? c.accuracy : null,
+      test: simulated,
+      via: simulated ? "sim" : "gps"
+    };
+  }
+  function testUnlockCount(){
+    var n = 0;
+    for (var i=0;i<UNITS.length;i++){ var u = state.unlocks[UNITS[i].code]; if (u && u.test) n++; }
+    return n;
+  }
+
+  /* ---------------- geo helpers ---------------- */
+  function pointInRing(pt, ring){
+    var x = pt[0], y = pt[1], inside = false;
+    for (var i=0, j=ring.length-1; i<ring.length; j=i++){
+      var xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+      var intersect = ((yi>y) !== (yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+  function pointInPolys(pt, polys){
+    // even-odd across all rings of all polygons (handles holes reasonably)
+    for (var p=0;p<polys.length;p++){
+      var poly = polys[p];
+      var inOuter = pointInRing(pt, poly[0]);
+      if (!inOuter) continue;
+      var inHole = false;
+      for (var r=1;r<poly.length;r++){ if (pointInRing(pt, poly[r])) { inHole = true; break; } }
+      if (inOuter && !inHole) return true;
+    }
+    return false;
+  }
+  function inBBox(lon, lat, b, pad){
+    pad = pad || 0;
+    return !(lon < b[0]-pad || lon > b[2]+pad || lat < b[1]-pad || lat > b[3]+pad);
+  }
+  function findIn(list, lon, lat){
+    for (var i=0;i<list.length;i++){
+      var r = list[i];
+      if (!inBBox(lon, lat, r.bbox)) continue;
+      if (pointInPolys([lon,lat], r.polys)) return r;
+    }
+    return null;
+  }
+  // 점과 다각형 경계 사이 거리(km) — 경계 단순화로 해안·경계 근처가 밖으로 판정될 때 보정용
+  function distToPolysKm(lon, lat, polys){
+    var kx = Math.cos(lat*Math.PI/180) * 111.32, ky = 110.57;
+    var best = Infinity;
+    for (var p=0;p<polys.length;p++) for (var r=0;r<polys[p].length;r++){
+      var ring = polys[p][r];
+      for (var i=0, j=ring.length-1; i<ring.length; j=i++){
+        var ax=(ring[j][0]-lon)*kx, ay=(ring[j][1]-lat)*ky, bx=(ring[i][0]-lon)*kx, by=(ring[i][1]-lat)*ky;
+        var dx=bx-ax, dy=by-ay, len=dx*dx+dy*dy;
+        var t = len ? Math.max(0, Math.min(1, -(ax*dx+ay*dy)/len)) : 0;
+        var qx=ax+t*dx, qy=ay+t*dy, d=Math.sqrt(qx*qx+qy*qy);
+        if (d < best) best = d;
+      }
+    }
+    return best;
+  }
+  function nearestIn(list, lon, lat){
+    var best = null, bestD = NEAREST_KM;
+    for (var i=0;i<list.length;i++){
+      var r = list[i];
+      if (!inBBox(lon, lat, r.bbox, 0.05)) continue;
+      var d = distToPolysKm(lon, lat, r.polys);
+      if (d <= bestD){ bestD = d; best = r; }
+    }
+    return best;
+  }
+  // 좌표 → 해금 단위(세분화된 시·도면 시·군·구, 아니면 시·도)
+  // 좌표 → 해금 단위(하위 지역, 세종은 시·도). 작은 섬은 해금 단위 데이터에만 있으므로
+  // 시·도를 먼저 거치지 않고 230개 단위에서 바로 찾는다 (경계 상자로 먼저 걸러서 빠르다).
+  function findRegionForPoint(lon, lat){
+    return findIn(UNITS, lon, lat) || nearestIn(UNITS, lon, lat);
+  }
+  // 좌표 → 챌린지 섬 (일반 해금 단위와 따로 판정한다. 백령도처럼 인천 안의 섬은 둘 다 걸릴 수 있다)
+  function findChallengeForPoint(lon, lat){
+    return findIn(CHALLENGES, lon, lat) || nearestIn(CHALLENGES, lon, lat);
+  }
+
+  /* ---------------- toast ---------------- */
+  function toast(msg, icon){
+    var wrap = document.getElementById("toast-wrap");
+    var el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = "<span>"+(icon||"✅")+"</span><span></span>";
+    el.querySelector("span:last-child").textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(function(){ el.style.transition="opacity .3s"; el.style.opacity="0"; setTimeout(function(){ el.remove(); }, 300); }, 2200);
+  }
+
+  /* ---------------- 표시용 섬 배치 ----------------
+     실제 지도와 다르게, 모바일에서 지도가 크게 보이도록 먼 섬을 내륙 쪽으로 옮기고 터치하기 쉽게 키운다.
+     ★ 화면 표시에만 쓴다. 위치 판정(GPS)·이전·가상 위치는 모두 실제 좌표(r.polys, r.lp)를 그대로 쓴다.
+     규칙은 다각형(외곽 링) 경계 상자 중심으로 고르고, 그 다각형을 자기 중심 기준 k배로 키운 뒤 (dx, dy)만큼 옮긴다. */
+  var DISPLAY_RULES = [
+    // 서해5도 북쪽: 백령도·대청도·소청도
+    { name:"백령·대청·소청", test:function(x, y){ return x < 125.0 && y > 37.5; },               dx:0.85, dy:0,    k:1.5 },
+    // 연평도(대·소연평): 옮긴 백령·대청·소청과 겹치지 않게 동남쪽으로 조금
+    { name:"연평",          test:function(x, y){ return x > 125.55 && x < 125.8 && y > 37.55 && y < 37.8; }, dx:0.2,  dy:-0.1, k:1.5 },
+    // 가거도: 가장 서쪽
+    { name:"가거",          test:function(x, y){ return x < 125.2 && y > 33.9 && y < 34.2; },  dx:0.45, dy:0,    k:1.4 },
+    // 흑산도·홍도·만재도·태도: 신안 앞바다 섬과 겹치지 않을 만큼만
+    { name:"흑산·홍도",      test:function(x, y){ return x < 125.6 && y > 33.9 && y < 35.0; },  dx:0.25, dy:0,    k:1.3 },
+    // 격렬비열도 (태안)
+    { name:"격렬비열",       test:function(x, y){ return x < 125.75 && y > 36.4 && y < 36.8; }, dx:0.2,  dy:0,    k:1.5 },
+    // 울릉도(관음도·죽도 포함)
+    { name:"울릉",          test:function(x, y){ return x > 130.7 && x < 131.1 && y > 37.3; }, dx:-0.7, dy:0,    k:1.5 },
+    // 독도: 울릉도 동남쪽에, 아주 작아서 크게
+    { name:"독도",          test:function(x, y){ return x > 131.5; },                          dx:-1.27, dy:0.1, k:4 },
+    // 추자도: 제주를 올린 만큼 살짝
+    { name:"추자",          test:function(x, y){ return x > 126.15 && x < 126.5 && y > 33.85 && y < 34.06; }, dx:0, dy:0.08, k:1.2 },
+    // 제주 본섬·우도·마라도·가파도·비양도: 위로
+    { name:"제주",          test:function(x, y){ return y < 33.7; },                           dx:0,    dy:0.25, k:1 }
+  ];
+  function ringBoxCenter(ring){
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (var i=0;i<ring.length;i++){
+      var x = ring[i][0], y = ring[i][1];
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return { cx:(x0+x1)/2, cy:(y0+y1)/2, x0:x0, y0:y0, x1:x1, y1:y1 };
+  }
+  function ruleFor(cx, cy){
+    for (var i=0;i<DISPLAY_RULES.length;i++) if (DISPLAY_RULES[i].test(cx, cy)) return DISPLAY_RULES[i];
+    return null;
+  }
+  // 다각형 하나를 표시 좌표로 (규칙이 없으면 그대로 돌려준다)
+  function displayPoly(poly){
+    var c = ringBoxCenter(poly[0]), rule = ruleFor(c.cx, c.cy);
+    if (!rule) return poly;
+    return poly.map(function(ring){
+      return ring.map(function(p){
+        return [c.cx + (p[0]-c.cx)*rule.k + rule.dx, c.cy + (p[1]-c.cy)*rule.k + rule.dy];
+      });
+    });
+  }
+  function displayPolys(r){
+    if (!r.dpolys) r.dpolys = r.polys.map(displayPoly);
+    return r.dpolys;
+  }
+  function displayBBox(r){
+    if (!r.dbbox){
+      var b = [Infinity, Infinity, -Infinity, -Infinity];
+      displayPolys(r).forEach(function(p){
+        var c = ringBoxCenter(p[0]);
+        b[0] = Math.min(b[0], c.x0); b[1] = Math.min(b[1], c.y0); b[2] = Math.max(b[2], c.x1); b[3] = Math.max(b[3], c.y1);
+      });
+      r.dbbox = b;
+    }
+    return r.dbbox;
+  }
+  // 지역 안의 한 점(라벨·터치 위치)을 표시 좌표로: 그 점을 품은 다각형의 규칙을 따른다
+  function displayPoint(r, lon, lat){
+    for (var i=0;i<r.polys.length;i++){
+      var c = ringBoxCenter(r.polys[i][0]);
+      if (lon < c.x0 || lon > c.x1 || lat < c.y0 || lat > c.y1) continue;
+      var rule = ruleFor(c.cx, c.cy);
+      if (!rule) return [lon, lat];
+      return [c.cx + (lon-c.cx)*rule.k + rule.dx, c.cy + (lat-c.cy)*rule.k + rule.dy];
+    }
+    return [lon, lat];
+  }
+
+  /* ---------------- projection ----------------
+     위경도를 그대로 쓰되 경도 방향을 cos(중앙 위도)로 줄여 모양 왜곡을 줄인다. 범위는 표시용 배치 기준 */
+  var MAP_W = 800, MAP_PAD = 16;
+  var PROJ = (function(){
+    var b = [Infinity, Infinity, -Infinity, -Infinity];
+    SIDO.concat(CHALLENGES).forEach(function(s){
+      var d = displayBBox(s);
+      b[0] = Math.min(b[0], d[0]); b[1] = Math.min(b[1], d[1]);
+      b[2] = Math.max(b[2], d[2]); b[3] = Math.max(b[3], d[3]);
+    });
+    var kx = Math.cos(((b[1]+b[3])/2) * Math.PI/180);
+    var scale = (MAP_W - MAP_PAD*2) / ((b[2]-b[0]) * kx);
+    return { lon0:b[0], lat1:b[3], kx:kx, scale:scale, h: Math.ceil((b[3]-b[1])*scale + MAP_PAD*2) };
+  })();
+  function proj(lon, lat){
+    return [MAP_PAD + (lon-PROJ.lon0)*PROJ.kx*PROJ.scale, MAP_PAD + (PROJ.lat1-lat)*PROJ.scale];
+  }
+  // 지역의 SVG 경로 (표시용 배치 적용)
+  function pathFor(r){
+    var polys = displayPolys(r), out = [];
+    for (var p=0;p<polys.length;p++) for (var q=0;q<polys[p].length;q++){
+      var ring = polys[p][q];
+      for (var i=0;i<ring.length;i++){
+        var xy = proj(ring[i][0], ring[i][1]);
+        out.push((i===0?"M":"L")+xy[0].toFixed(1)+","+xy[1].toFixed(1));
+      }
+      out.push("Z");
+    }
+    return out.join("");
+  }
+  function projBBox(b){
+    var a = proj(b[0], b[3]), c = proj(b[2], b[1]);
+    return { x:a[0], y:a[1], w:c[0]-a[0], h:c[1]-a[1] };
+  }
+
+  /* ---------------- map render ---------------- */
+  var svg = document.getElementById("map");
+  var zoomCode = null;    // 확대 중인 시·도 코드 (null = 전국)
+  var zoomScale = 1;
+
+  // 층 순서: 시·도 바탕 → 시·도 진행도(해금 색, 비율만큼 진하게) → 하위 지역(확대된 시·도만 색칠)
+  //          → 시·도 굵은 경계 → 하위 지역 이름
+  function buildMap(){
+    svg.setAttribute("viewBox", "0 0 "+MAP_W+" "+PROJ.h);
+    var sidoParts = [], progParts = [], subParts = [], lineParts = [], labelParts = [], chalParts = [];
+    SIDO.forEach(function(s){
+      var d = pathFor(s);
+      sidoParts.push('<path class="region-path sido-path" data-code="'+s.code+'" d="'+d+'"></path>');
+      lineParts.push('<path class="sido-line" data-code="'+s.code+'" d="'+d+'"></path>');
+      if (s.children){
+        progParts.push('<path class="prog-path" data-code="'+s.code+'" d="'+d+'"></path>');
+        s.children.forEach(function(c){
+          subParts.push('<path class="region-path sub-path" data-code="'+c.code+'" data-parent="'+s.code+'" d="'+pathFor(c)+'"></path>');
+          var dlp = displayPoint(c, c.lp[0], c.lp[1]), lp = proj(dlp[0], dlp[1]);
+          labelParts.push('<text class="sub-label" data-code="'+c.code+'" data-parent="'+s.code+'" x="'+lp[0].toFixed(1)+'" y="'+lp[1].toFixed(1)+'">'+escapeHtml(c.name)+'</text>');
+        });
+      }
+    });
+    CHALLENGES.forEach(function(c){
+      chalParts.push('<path class="region-path chal-path" data-code="'+c.code+'" d="'+pathFor(c)+'"></path>');
+      // 작은 섬도 누르기 쉽게: 보이지 않는 터치 영역 (반지름은 applyZoom 에서 화면 px 기준으로 맞춘다)
+      var hp = displayPoint(c, c.lp[0], c.lp[1]), hxy = proj(hp[0], hp[1]);
+      chalParts.push('<circle class="chal-hit" data-code="'+c.code+'" cx="'+hxy[0].toFixed(1)+'" cy="'+hxy[1].toFixed(1)+'" r="8"></circle>');
+    });
+    svg.innerHTML =
+      // 테스트 해금 표시용 사선 무늬 (CSS 변수는 style 로만 적용된다)
+      '<defs><pattern id="testHatch" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)">'+
+        '<rect width="9" height="9" style="fill:var(--unlocked)"></rect>'+
+        '<rect width="3.5" height="9" style="fill:var(--gold)"></rect>'+
+      '</pattern></defs>'+
+      '<g id="mapView">'+
+        '<g id="layerSido">'+sidoParts.join("")+'</g>'+
+        '<g id="layerProg">'+progParts.join("")+'</g>'+
+        '<g id="layerSub">'+subParts.join("")+'</g>'+
+        '<g id="layerLine">'+lineParts.join("")+'</g>'+
+        '<g id="layerChal">'+chalParts.join("")+'</g>'+
+        '<g id="layerLabels">'+labelParts.join("")+'</g>'+
+      '</g>';
+    Array.prototype.forEach.call(svg.querySelectorAll(".region-path"), function(p){
+      p.addEventListener("click", function(){ handleMapTap(p.getAttribute("data-code")); });
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll(".chal-hit"), function(h){
+      h.addEventListener("click", function(e){
+        var near = nearbyChallenges(e.clientX, e.clientY);
+        if (near.length > 1) renderChallengePicker(near); // 서해5도처럼 붙어 있으면 골라서 연다
+        else handleMapTap(h.getAttribute("data-code"));
+      });
+    });
+    applyZoom(false);
+    renderMap();
+  }
+  // 진행도 → 겹칠 해금 색의 진하기. 하나라도 열었으면 최소 18% 로 보이게 한다.
+  function progOpacity(n, total){ return n > 0 ? 0.18 + 0.82*(n/total) : 0; }
+  function homeSidoCode(){
+    var h = state.home && REG[state.home];
+    return h ? (h.parent || h.code) : null;
+  }
+  function renderMap(){
+    var unlockedCount = unlockedUnitCount();
+    document.getElementById("unlockedCount").textContent = unlockedCount;
+    document.getElementById("progressFill").style.width = Math.round(unlockedCount/TOTAL_UNITS*100)+"%";
+    Array.prototype.forEach.call(svg.querySelectorAll(".region-path"), function(p){
+      var code = p.getAttribute("data-code");
+      var unit = isUnit(code);
+      p.classList.toggle("unlocked", unit && isUnlocked(code) && code !== state.home);
+      p.classList.toggle("home", unit && code === state.home);
+      p.classList.toggle("test-unlock", unit && isUnlocked(code) && !!state.unlocks[code].test);
+      p.classList.toggle("selected", code === selectedCode);
+      // 선택 테두리가 이웃 지역에 가려지지 않도록 같은 층의 맨 위로 올린다
+      if (code === selectedCode && p.nextSibling) p.parentNode.appendChild(p);
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll(".prog-path"), function(p){
+      var s = REG[p.getAttribute("data-code")];
+      p.style.fillOpacity = progOpacity(childUnlockedCount(s), s.children.length).toFixed(3);
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll(".chal-path"), function(p){
+      var u = state.unlocks[p.getAttribute("data-code")];
+      p.classList.toggle("chal-done", !!u);
+      p.classList.toggle("test-unlock", !!(u && u.test));
+    });
+    var homeSido = homeSidoCode();
+    Array.prototype.forEach.call(svg.querySelectorAll(".sido-line"), function(l){
+      l.classList.toggle("home-sido", l.getAttribute("data-code") === homeSido);
+    });
+    var testN = testUnlockCount();
+    document.getElementById("legendTest").hidden = testN === 0;
+    var testCountEl = document.getElementById("testCount"); // dev 빌드에만 있음
+    if (testCountEl){ testCountEl.hidden = testN === 0; testCountEl.textContent = "🧪"+testN+" "; }
+    refreshSideViews();
+    renderMapBar();
+  }
+
+  /* ---------------- 챌린지 섬 터치 ---------------- */
+  var CHAL_TOUCH_PX = 16; // 챌린지 섬 터치 영역 반지름 (화면 px)
+  function nearbyChallenges(x, y){
+    var out = [];
+    Array.prototype.forEach.call(svg.querySelectorAll(".chal-hit"), function(h){
+      var b = h.getBoundingClientRect(), cx = b.left + b.width/2, cy = b.top + b.height/2;
+      if (Math.sqrt((cx-x)*(cx-x) + (cy-y)*(cy-y)) <= CHAL_TOUCH_PX * 1.6) out.push(REG[h.getAttribute("data-code")]);
+    });
+    return out;
+  }
+  function renderChallengePicker(list){
+    openSheet(
+      sheetHead("이 근처 챌린지", "섬이 가까이 붙어 있어요. 도전할 섬을 골라주세요")+
+      '<div class="sub-list" id="chalPick">'+list.map(function(c){
+        var st = unitStatus(c.code);
+        return '<div class="sub-row"><button class="sub-row-main" data-open="'+c.code+'"><span>🏆 '+escapeHtml(c.name)+'</span>'+
+          '<span class="region-tag '+(isUnlocked(c.code) ? st.cls : "tag-locked")+'">'+(isUnlocked(c.code) ? st.text : "도전 전")+'</span></button></div>';
+      }).join("")+'</div>'
+    );
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    document.getElementById("chalPick").addEventListener("click", function(e){
+      var b = e.target.closest("[data-open]");
+      if (b) openRegion(b.getAttribute("data-open"));
+    });
+  }
+
+  // 시·도 진행도 (도감에서 쓴다)
+  function sidoProgress(s){
+    return s.children ? { n:childUnlockedCount(s), total:s.children.length } : { n:isUnlocked(s.code) ? 1 : 0, total:1 };
+  }
+  /* ---------------- tap / double tap ----------------
+     테스트 모드(dev 빌드)에서만 한 번 탭을 잠깐 미뤄 두 번 탭과 구분한다.
+     첫 탭에 바로 시트가 열리면 두 번째 탭이 시트 배경을 누르게 되기 때문. */
+  var DOUBLE_TAP_MS = 250;
+  var tapTimer = null, tapCode = null;
+  function handleMapTap(code){
+    if (!(DEV && devMode)){ openRegion(code); return; }
+    if (tapTimer && tapCode === code){
+      clearTimeout(tapTimer); tapTimer = null; tapCode = null;
+      doubleTapUnlock(code);
+      return;
+    }
+    if (tapTimer) clearTimeout(tapTimer);
+    tapCode = code;
+    tapTimer = setTimeout(function(){ tapTimer = null; tapCode = null; openRegion(code); }, DOUBLE_TAP_MS);
+  }
+  function doubleTapUnlock(code, via){
+    if (!(DEV && devMode)) return;
+    var r = regionByCode(code);
+    if (!r) return;
+    if (r.children){ openRegion(code); return; } // 세분화된 시·도는 해금하지 않고 확대만
+    if (isUnlocked(code)){ toast(fullName(r)+"은(는) 이미 해금됐어요", "ℹ️"); return; }
+    state.unlocks[code] = { at:Date.now(), lon:r.lp[0], lat:r.lp[1], acc:0, test:true, via:via || "dbltap" };
+    if (!saveState()){ delete state.unlocks[code]; return; }
+    renderMap();
+    showStamp(r.name, "test");
+  }
+
+  /* ---------------- zoom (전국 ↔ 시·도) ---------------- */
+  var mapBar = document.getElementById("mapBar");
+  var LABEL_PX = 12; // 하위 지역 이름 글자 크기 (화면 px)
+  function applyZoom(animate){
+    var view = svg.querySelector("#mapView");
+    if (!view) return;
+    var tx = 0, ty = 0, s = 1;
+    if (zoomCode){
+      var bb = projBBox(zoomBBox(REG[zoomCode]));
+      s = Math.min(MAP_W/bb.w, PROJ.h/bb.h) * 0.92;
+      tx = (MAP_W - bb.w*s)/2 - bb.x*s;
+      ty = (PROJ.h - bb.h*s)/2 - bb.y*s;
+    }
+    zoomScale = s;
+    view.style.transition = animate ? "transform .32s ease" : "none";
+    view.style.transform = "translate("+tx.toFixed(1)+"px,"+ty.toFixed(1)+"px) scale("+s.toFixed(4)+")";
+    svg.classList.toggle("zoomed", !!zoomCode);
+    Array.prototype.forEach.call(svg.querySelectorAll(".sido-path, .prog-path, .sido-line"), function(p){
+      p.classList.toggle("zoom-target", p.getAttribute("data-code") === zoomCode);
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll(".sub-path"), function(p){
+      p.classList.toggle("active", !!zoomCode && p.getAttribute("data-parent") === zoomCode);
+    });
+    placeLabels(tx, ty, s);
+    var hitPx = (svg.getBoundingClientRect().width || MAP_W) / MAP_W;
+    Array.prototype.forEach.call(svg.querySelectorAll(".chal-hit"), function(c){ c.setAttribute("r", (CHAL_TOUCH_PX/(hitPx*s)).toFixed(2)); });
+    renderMapBar();
+  }
+  // 확대된 시·도의 하위 지역 이름만 보이되, 화면에서 겹치는 이름은 면적이 작은 쪽부터 숨긴다
+  function placeLabels(tx, ty, s){
+    var px = (svg.getBoundingClientRect().width || MAP_W) / MAP_W; // 화면 px / SVG 단위
+    var placed = [];
+    var labels = Array.prototype.slice.call(svg.querySelectorAll(".sub-label"));
+    labels.forEach(function(t){ t.classList.remove("on"); });
+    if (!zoomCode) return;
+    labels.filter(function(t){ return t.getAttribute("data-parent") === zoomCode; })
+      .sort(function(a, b){ return REG[b.getAttribute("data-code")].a - REG[a.getAttribute("data-code")].a; })
+      .forEach(function(t){
+        var name = REG[t.getAttribute("data-code")].name;
+        var cx = (parseFloat(t.getAttribute("x"))*s + tx) * px, cy = (parseFloat(t.getAttribute("y"))*s + ty) * px;
+        var w = name.length * LABEL_PX * 0.95 + 4, h = LABEL_PX + 4;
+        var box = { x0:cx - w/2, y0:cy - h/2, x1:cx + w/2, y1:cy + h/2 };
+        for (var i=0;i<placed.length;i++){
+          var q = placed[i];
+          if (box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0) return; // 겹침 → 숨김
+        }
+        placed.push(box);
+        t.classList.add("on");
+        t.style.fontSize = (LABEL_PX/(px*s)).toFixed(2)+"px";
+        t.style.strokeWidth = (3/(px*s)).toFixed(2)+"px";
+      });
+  }
+  // 확대 범위: 하위 지역들의 경계 상자 합 (챌린지로 뺀 울릉·독도 때문에 경북 본토가 작아지지 않게)
+  function zoomBBox(s){
+    if (!s.children) return displayBBox(s);
+    var b = [Infinity, Infinity, -Infinity, -Infinity];
+    s.children.forEach(function(c){
+      var d = displayBBox(c);
+      b[0] = Math.min(b[0], d[0]); b[1] = Math.min(b[1], d[1]);
+      b[2] = Math.max(b[2], d[2]); b[3] = Math.max(b[3], d[3]);
+    });
+    return b;
+  }
+  function zoomTo(code){
+    zoomCode = code;
+    applyZoom(true);
+  }
+  function zoomOut(){
+    if (scrimEl) closeSheet();
+    zoomCode = null;
+    applyZoom(true);
+  }
+  function renderMapBar(){
+    if (!mapBar) return;
+    if (!zoomCode){
+      mapBar.hidden = true;
+      return;
+    }
+    var r = REG[zoomCode];
+    mapBar.hidden = false;
+    document.getElementById("zoomTitle").textContent = r.name+" · "+childUnlockedCount(r)+"/"+r.children.length+" 해금";
+    document.getElementById("btnLegacy").hidden = !state.legacy[zoomCode];
+  }
+  document.getElementById("btnZoomOut").addEventListener("click", zoomOut);
+  window.addEventListener("resize", function(){ applyZoom(false); });
+  document.getElementById("btnLegacy").addEventListener("click", function(){
+    if (zoomCode) renderLegacySheet(REG[zoomCode]);
+  });
+  document.getElementById("btnSubList").addEventListener("click", function(){
+    if (zoomCode) renderSubListSheet(REG[zoomCode]);
+  });
+
+  // 작은 하위 지역(과천·구리 등)은 지도에서 누르기 어려워 목록으로도 고를 수 있게 한다
+  function unitStatus(code){
+    var u = state.unlocks[code];
+    if (code === state.home) return { cls:"tag-home", text:"🏡 홈" };
+    if (u && u.test) return { cls:"tag-test", text:"🧪 테스트 해금" };
+    if (u) return { cls:"tag-unlocked", text:"🔓 해금" };
+    return { cls:"tag-locked", text:"🔒 잠김" };
+  }
+  function renderSubListSheet(sidoR){
+    var devTools = DEV && devMode;
+    var rows = sidoR.children.slice().sort(function(a, b){ return a.name.localeCompare(b.name, "ko"); }).map(function(c){
+      var st = unitStatus(c.code);
+      return '<div class="sub-row">'+
+        '<button class="sub-row-main" data-open="'+c.code+'"><span>'+escapeHtml(c.name)+'</span>'+
+          '<span class="region-tag '+st.cls+'">'+st.text+'</span></button>'+
+        (devTools && !isUnlocked(c.code)
+          ? '<button class="sub-row-dev" data-move="'+c.code+'" title="여기로 가상 이동">🧭</button>'+
+            '<button class="sub-row-dev" data-unlock="'+c.code+'" title="테스트 해금">🧪</button>'
+          : '')+
+      '</div>';
+    }).join("");
+    openSheet(
+      sheetHead(sidoR.name+" 목록", childUnlockedCount(sidoR)+"/"+sidoR.children.length+" 해금 · 눌러서 지역 정보 보기")+
+      '<div class="sub-list" id="subList">'+rows+'</div>'
+    );
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    document.getElementById("subList").addEventListener("click", function(e){
+      var b = e.target.closest("button");
+      if (!b) return;
+      if (b.hasAttribute("data-open")){ openRegion(b.getAttribute("data-open")); return; }
+      if (b.hasAttribute("data-move")){
+        var r = moveSimulatedTo(b.getAttribute("data-move"));
+        if (r){ syncDevSelects(r.code); toast(fullName(r)+"(으)로 가상 이동했어요", "🧭"); }
+        return;
+      }
+      if (b.hasAttribute("data-unlock")){
+        doubleTapUnlock(b.getAttribute("data-unlock"), "list");
+        renderSubListSheet(sidoR);
+      }
+    });
+  }
+
+  /* ---------------- onboarding / geolocation ---------------- */
+  var onboardStatus = document.getElementById("onboardStatus");
+  var devMode = false;        // 테스트 모드 (dev 빌드에서만 켤 수 있다)
+  var simulatedPoint = null;  // [lon,lat] 가상 위치 (dev 빌드 + 테스트 모드에서만 사용)
+  var lastGeoError = null;    // "denied" | "timeout" | "unavailable" | null
+
+  // 실제 위치를 측정한다. 실패하면 null 로 resolve 하고 이유를 lastGeoError 에 남긴다.
+  // maximumAge:0 — 이전에 캐시된 위치로 판정하지 않는다 (CLAUDE.md §5 신선도)
+  function currentPositionAsync(){
+    lastGeoError = null;
+    return new Promise(function(resolve){
+      if (DEV && devMode && simulatedPoint){
+        resolve({coords:{longitude:simulatedPoint[0], latitude:simulatedPoint[1], accuracy:0}, simulated:true});
+        return;
+      }
+      var opts = { enableHighAccuracy:true, timeout:8000, maximumAge:0 };
+      // Native app build (Capacitor): use the native Geolocation plugin so the
+      // OS-level permission prompt and GPS hardware are used correctly.
+      var capGeo = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+      if (capGeo && capGeo.getCurrentPosition){
+        capGeo.getCurrentPosition(opts)
+          .then(function(pos){ resolve(pos); })
+          .catch(function(err){
+            var m = String((err && (err.message || err.code)) || "").toLowerCase();
+            lastGeoError = /denied|permission/.test(m) ? "denied" : (/timeout|timed out/.test(m) ? "timeout" : "unavailable");
+            resolve(null);
+          });
+        return;
+      }
+      // Web/preview build: standard browser Geolocation API.
+      if (!("geolocation" in navigator)){ lastGeoError = "unavailable"; resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        function(pos){ resolve(pos); },
+        function(err){
+          lastGeoError = err && err.code === 1 ? "denied" : (err && err.code === 3 ? "timeout" : "unavailable");
+          resolve(null);
+        },
+        opts
+      );
+    });
+  }
+  function geoFailMessage(){
+    if (lastGeoError === "denied") return "위치 권한이 꺼져 있어요. 설정 탭에서 위치 권한을 확인해주세요.";
+    if (lastGeoError === "timeout") return "위치를 잡지 못했어요. 실외나 창가에서 다시 시도해주세요.";
+    return "위치를 가져오지 못했어요. 위치 서비스(GPS)가 켜져 있는지 확인해주세요.";
+  }
+  // 정확도가 기준보다 낮으면 그 값(m)을, 괜찮으면 0 을 돌려준다. 정확도 값이 없으면 막지 않는다.
+  function poorAccuracy(pos){
+    var a = pos && pos.coords && pos.coords.accuracy;
+    return (typeof a === "number" && a > ACCURACY_LIMIT_M) ? Math.round(a) : 0;
+  }
+  function poorAccuracyMessage(m){
+    return "위치 정확도가 낮아요(약 ±"+m+"m). 하늘이 트인 곳에서 다시 측정해주세요.";
+  }
+
+  function showMapView(){
+    document.getElementById("onboard").hidden = true;
+    document.getElementById("mapCard").hidden = false;
+    buildMap();
+  }
+
+  function startWithHome(code, pos){
+    state.home = code;
+    recordUnlock(code, pos);
+    saveState();
+    showMapView();
+    var r = regionByCode(code);
+    showStamp(r ? r.name : "현재 지역", "home");
+  }
+
+  var btnLocate = document.getElementById("btnLocate");
+  btnLocate.addEventListener("click", function(){
+    onboardStatus.textContent = "위치를 확인하는 중...";
+    currentPositionAsync().then(function(pos){
+      if (!pos){
+        onboardStatus.textContent = geoFailMessage() + (DEV ? " 테스트 모드도 쓸 수 있어요." : "");
+        return;
+      }
+      var poor = poorAccuracy(pos);
+      if (poor){
+        onboardStatus.textContent = poorAccuracyMessage(poor);
+        btnLocate.textContent = "📡 다시 측정하기";
+        return;
+      }
+      var r = findRegionForPoint(pos.coords.longitude, pos.coords.latitude);
+      if (!r){
+        var ch = findChallengeForPoint(pos.coords.longitude, pos.coords.latitude);
+        onboardStatus.textContent = ch
+          ? ch.name+"은(는) 챌린지 섬이라 홈 지역으로 정할 수 없어요. 육지에서 시작한 뒤 챌린지 탭에서 도전해주세요."
+          : "대한민국 영역 밖으로 확인됐어요." + (DEV ? " 테스트 모드로 시작해볼까요?" : "");
+        return;
+      }
+      onboardStatus.textContent = "";
+      startWithHome(r.code, pos);
+    });
+  });
+
+  /* ---------------- dev mode (dev 빌드에서만 동작) ---------------- */
+  var devToggle = document.getElementById("devToggle");    // 상단 테스트 모드 바
+  var devToggle2 = document.getElementById("devToggle2");  // 설정 › 개발자
+  var devPanel = document.getElementById("devPanel");
+  var devSelect = document.getElementById("devSelect");
+  var devSubSelect = document.getElementById("devSubSelect");
+
+  function setDevMode(v){
+    if (!DEV) return;
+    devMode = !!v;
+    devToggle.setAttribute("aria-pressed", devMode ? "true":"false");
+    devToggle2.setAttribute("aria-pressed", devMode ? "true":"false");
+    devToggle2.textContent = devMode ? "켜짐" : "꺼짐";
+    devPanel.hidden = !devMode;
+    if (!devMode){ simulatedPoint = null; if (tapTimer){ clearTimeout(tapTimer); tapTimer = null; } }
+  }
+  function moveSimulatedTo(code){
+    if (!(DEV && devMode)) return null;
+    var r = regionByCode(code);
+    simulatedPoint = [r.lp[0], r.lp[1]]; // 빌드 단계에서 계산한, 다각형 안쪽이 보장되는 점
+    return r;
+  }
+  function fillDevSub(){
+    var s = REG[devSelect.value];
+    devSubSelect.innerHTML = "";
+    devSubSelect.hidden = !s.children;
+    if (!s.children) return;
+    s.children.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"ko"); }).forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = c.code; opt.textContent = c.name;
+      devSubSelect.appendChild(opt);
+    });
+  }
+  function syncDevSelects(code){
+    if (!DEV) return;
+    var r = REG[code];
+    devSelect.value = r.parent || r.code;
+    fillDevSub();
+    if (r.parent) devSubSelect.value = r.code;
+  }
+
+  if (DEV){
+    SIDO.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"ko"); }).forEach(function(r){
+      var opt = document.createElement("option");
+      opt.value = r.code; opt.textContent = r.name;
+      devSelect.appendChild(opt);
+    });
+    devSelect.addEventListener("change", fillDevSub);
+    fillDevSub();
+    devToggle.addEventListener("click", function(){ setDevMode(!devMode); });
+    devToggle2.addEventListener("click", function(){ setDevMode(!devMode); });
+
+    document.getElementById("btnDevStart").addEventListener("click", function(){
+      setDevMode(true);
+      onboardStatus.textContent = "위 테스트 패널에서 지역을 선택하고 '이 위치로 이동'을 눌러주세요.";
+      devPanel.scrollIntoView({behavior:"smooth", block:"center"});
+    });
+
+    document.getElementById("devApply").addEventListener("click", function(){
+      var code = devSubSelect.hidden ? devSelect.value : devSubSelect.value;
+      var r = moveSimulatedTo(code);
+      if (!r) return;
+      if (document.getElementById("onboard").hidden === false){
+        startWithHome(code, {coords:{longitude:simulatedPoint[0], latitude:simulatedPoint[1], accuracy:0}, simulated:true});
+      } else {
+        toast(fullName(r)+"(으)로 이동했어요. 지도에서 확인해보세요.", "🧭");
+        if (selectedCode) openRegion(selectedCode);
+      }
+    });
+  }
+
+  /* ---------------- sheet ---------------- */
+  var selectedCode = null;
+  var scrimEl = null;
+  function closeSheet(){
+    if (scrimEl){ scrimEl.remove(); scrimEl = null; }
+    selectedCode = null;
+    renderMap();
+  }
+  function openSheet(html){
+    if (scrimEl) scrimEl.remove();
+    scrimEl = document.createElement("div");
+    scrimEl.className = "scrim";
+    scrimEl.innerHTML = '<div class="sheet"><div class="sheet-handle"></div>'+html+'</div>';
+    scrimEl.addEventListener("click", function(e){ if (e.target === scrimEl) closeSheet(); });
+    document.body.appendChild(scrimEl);
+  }
+
+  function openRegion(code){
+    var r = regionByCode(code);
+    if (!r) return;
+    if (r.children){
+      // 세분화된 시·도는 시트 대신 시·군·구 지도로 확대
+      if (zoomCode !== code) zoomTo(code);
+      return;
+    }
+    selectedCode = code;
+    renderMap();
+    var isHome = code === state.home;
+
+    if (!isUnlocked(code)){
+      renderLockedSheet(r);
+    } else {
+      renderUnlockedSheet(r, isHome);
+    }
+  }
+
+  function unlockTag(code, isHome){
+    var u = state.unlocks[code];
+    var tag = '<span class="region-tag '+(isHome?'tag-home':'tag-unlocked')+'">'+(isHome?'🏡 내 홈 지역':'🔓 잠금 해제됨')+'</span>';
+    if (u && u.test){
+      var how = { dbltap:"더블 탭", list:"목록", sim:"가상 위치", "dev-all":"전체 해금" }[u.via];
+      tag += ' <span class="region-tag tag-test">🧪 테스트 해금'+(how ? ' · '+how : '')+'</span>';
+    }
+    return tag;
+  }
+
+  function renderLockedSheet(r){
+    var html =
+      '<div class="sheet-head"><div>'+
+        '<span class="region-tag tag-locked">🔒 잠김</span>'+
+        '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
+        '<div class="coord mono">'+escapeHtml(regionSubtitle(r))+'</div>'+
+      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
+      '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이 지역은 아직 방문하지 않았어요. 실제로 이 지역에 가서 확인하면 미션을 시작할 수 있어요.</p>'+
+      (DEV && devMode ? '<button class="btn btn-secondary btn-dev" id="devHereBtn">🧪 여기로 가상 이동</button>' : '')+
+      '<button class="btn btn-secondary" id="checkHereBtn">🧭 지금 여기 있는지 확인하기</button>'+
+      '<p class="status-line" id="lockedStatus"></p>'+
+      '<div id="missionSlot"></div>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    var devHereBtn = document.getElementById("devHereBtn");
+    if (devHereBtn) devHereBtn.addEventListener("click", function(){
+      if (!moveSimulatedTo(r.code)) return;
+      syncDevSelects(r.code);
+      document.getElementById("lockedStatus").textContent = "가상 위치를 "+fullName(r)+"(으)로 옮겼어요. 이제 위치를 확인해보세요.";
+    });
+    var checkBtn = document.getElementById("checkHereBtn");
+    checkBtn.addEventListener("click", function(){
+      var statusEl = document.getElementById("lockedStatus");
+      statusEl.textContent = "위치 확인 중...";
+      currentPositionAsync().then(function(pos){
+        if (!pos){ statusEl.textContent = geoFailMessage(); return; }
+        var poor = poorAccuracy(pos);
+        if (poor){
+          statusEl.textContent = poorAccuracyMessage(poor);
+          checkBtn.textContent = "📡 다시 측정하기";
+          return;
+        }
+        var lon = pos.coords.longitude, lat = pos.coords.latitude;
+        var hereUnit = findRegionForPoint(lon, lat), hereChal = findChallengeForPoint(lon, lat);
+        var here = r.challenge ? hereChal : hereUnit;
+        if (here && here.code === r.code){
+          statusEl.textContent = "";
+          renderMissionForm(r, pos);
+        } else {
+          var where = hereChal ? hereChal.name+"(챌린지 섬)" : (hereUnit ? fullName(hereUnit) : null);
+          statusEl.textContent = (where ? "현재 "+where+"에 계신 것으로 확인돼요." : "대한민국 영역 밖으로 확인됐어요.") + " "+r.name+"에 도착하면 다시 확인해주세요.";
+        }
+      });
+    });
+  }
+
+  function renderMissionForm(r, pos){
+    var slot = document.getElementById("missionSlot");
+    slot.innerHTML =
+      '<hr class="divider">'+
+      '<div class="mission-box">📍 도착 확인 완료! 미션: <b>커뮤니티 포스트 작성</b><br>이 지역에서의 순간을 짧은 글(+사진)로 남기면 지역이 잠금 해제돼요.</div>'+
+      '<textarea id="postText" placeholder="'+r.name+'에서의 순간을 적어보세요..." maxlength="300"></textarea>'+
+      '<div class="file-row"><label for="postPhoto">📷 사진 추가(선택)</label><input type="file" id="postPhoto" accept="image/*"><img id="photoPreview" class="photo-preview" hidden></div>'+
+      '<p class="status-line" id="photoInfo"></p>'+
+      '<button class="btn btn-primary" id="submitPostBtn">✅ 포스트 올리고 '+(r.challenge ? "챌린지 성공" : "잠금 해제")+'</button>'+
+      '<div id="saveError"></div>';
+    var photoData = null;
+    document.getElementById("postPhoto").addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        var tmpImg = new Image();
+        tmpImg.onload = function(){
+          var maxW = 480;
+          var scale = Math.min(1, maxW / tmpImg.width);
+          var cw = Math.max(1, Math.round(tmpImg.width*scale));
+          var ch = Math.max(1, Math.round(tmpImg.height*scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(tmpImg, 0, 0, cw, ch);
+          try{ photoData = canvas.toDataURL("image/jpeg", 0.72); }
+          catch(err){ photoData = ev.target.result; }
+          var img = document.getElementById("photoPreview");
+          img.src = photoData; img.hidden = false;
+          document.getElementById("photoInfo").textContent = "사진 약 "+fmtBytes(photoData.length)+" (480px로 줄여 저장해요)";
+        };
+        tmpImg.onerror = function(){
+          photoData = ev.target.result;
+          var img = document.getElementById("photoPreview");
+          img.src = photoData; img.hidden = false;
+        };
+        tmpImg.src = ev.target.result;
+      };
+      reader.readAsDataURL(f);
+    });
+    function submit(withPhoto){
+      var text = document.getElementById("postText").value.trim();
+      if (!text){ document.getElementById("postText").focus(); return; }
+      var hadUnlock = isUnlocked(r.code);
+      if (!addPost(r.code, text, withPhoto ? photoData : null, function(){ recordUnlock(r.code, pos); },
+                   function(){ if (!hadUnlock) delete state.unlocks[r.code]; })){
+        showSaveError(document.getElementById("saveError"), withPhoto && photoData ? photoData.length : 0, function(){ submit(false); });
+        return;
+      }
+      closeSheet();
+      showStamp(r.name, r.challenge ? "challenge" : "unlock");
+    }
+    document.getElementById("submitPostBtn").addEventListener("click", function(){ submit(true); });
+  }
+
+  // 포스트 추가 + 저장. 저장에 실패하면 추가한 것(과 함께 바꾼 상태)을 되돌리고 false.
+  function addPost(code, text, photo, alsoDo, undoAlso){
+    var prev = state.posts[code];
+    state.posts[code] = [{ who:"나", text:text, photo:photo||null, when:new Date().toLocaleDateString("ko-KR"), mine:true }].concat(prev || []);
+    if (alsoDo) alsoDo();
+    if (saveStateQuiet()) return true;
+    if (prev) state.posts[code] = prev; else delete state.posts[code];
+    if (undoAlso) undoAlso();
+    return false;
+  }
+  // 저장 공간 초과 안내 (사진이 있으면 사진 없이 다시 시도하는 버튼을 준다)
+  function showSaveError(slot, photoBytes, retryWithoutPhoto){
+    slot.innerHTML =
+      '<div class="save-error" role="alert">⚠️ 기기 저장 공간이 부족해 저장하지 못했어요.'+
+        (photoBytes ? ' 이 사진(약 '+fmtBytes(photoBytes)+')을 넣을 자리가 없어요.' : '')+
+        ' 지금 저장된 기록은 약 '+fmtBytes(storageUsageBytes())+'예요. 설정 › 데이터 백업으로 기록을 보관한 뒤 사진이 많은 포스트를 정리해주세요.</div>'+
+      (photoBytes && retryWithoutPhoto ? '<button class="btn btn-secondary" id="retryNoPhoto">사진 빼고 올리기</button>' : '');
+    var b = document.getElementById("retryNoPhoto");
+    if (b) b.addEventListener("click", retryWithoutPhoto);
+  }
+
+  function feedHtmlFor(posts){
+    return posts.map(function(p){
+      return '<div class="post"><div class="avatar">'+(p.mine?"나":escapeHtml(p.who.slice(0,1)))+'</div><div style="flex:1; min-width:0;">'+
+        '<span class="who">'+(p.mine?"나":escapeHtml(p.who))+'</span><span class="when">'+escapeHtml(p.when||"")+'</span>'+
+        '<div class="text">'+escapeHtml(p.text)+'</div>'+
+        (p.photo? '<img class="photo" src="'+p.photo+'">':'')+
+      '</div></div>';
+    }).join("");
+  }
+
+  function renderUnlockedSheet(r, isHome){
+    var buildings = state.buildings[r.code] || [];
+    var placedCount = buildings.filter(Boolean).length;
+    var myPosts = state.posts[r.code] || [];
+    var feed = myPosts.concat(seedPosts(r.code));
+    var feedHtml = feedHtmlFor(feed);
+
+    var html =
+      '<div class="sheet-head"><div>'+
+        unlockTag(r.code, isHome)+
+        '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
+        '<div class="coord mono">'+escapeHtml(regionSubtitle(r))+'</div>'+
+      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
+      '<div class="stat-row">'+
+        '<div class="stat-tile"><div class="v">'+myPosts.length+'</div><div class="l">내 포스트</div></div>'+
+        '<div class="stat-tile"><div class="v">'+placedCount+'</div><div class="l">건물 수</div></div>'+
+      '</div>'+
+      '<button class="btn btn-secondary" id="decorateBtn">🏗️ 이 지역 꾸미기</button>'+
+      '<hr class="divider">'+
+      '<h3 style="font-size:14px;">커뮤니티 피드</h3>'+
+      (feed.length? '<div class="feed">'+feedHtml+'</div>' : '<p class="empty-note">아직 포스트가 없어요.</p>')+
+      '<textarea id="extraPostText" placeholder="이 지역에 포스트 추가로 남기기..." maxlength="300"></textarea>'+
+      '<button class="btn btn-secondary" id="extraPostBtn">✏️ 포스트 남기기</button>'+
+      '<div id="saveError"></div>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    document.getElementById("decorateBtn").addEventListener("click", function(){ renderDecorateSheet(r); });
+    document.getElementById("extraPostBtn").addEventListener("click", function(){
+      var t = document.getElementById("extraPostText").value.trim();
+      if (!t) return;
+      if (!addPost(r.code, t, null)){ showSaveError(document.getElementById("saveError"), 0, null); return; }
+      toast("포스트를 남겼어요", "📝");
+      renderUnlockedSheet(r, isHome);
+    });
+  }
+
+  // 이전 버전(v1)에서 시·도 단위로 해금했던 기록. 시·군은 잠근 채 포스트·건물만 보존해 보여준다.
+  function renderLegacySheet(r){
+    var lg = state.legacy[r.code];
+    var buildings = state.buildings[r.code] || [];
+    var posts = state.posts[r.code] || [];
+    var html =
+      '<div class="sheet-head"><div>'+
+        '<span class="region-tag tag-legacy">📜 이전 버전 기록</span>'+
+        '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
+        '<div class="coord mono">'+escapeHtml(r.name_eng || "")+'</div>'+
+      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
+      '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이전 버전에서 '+r.name+' 단위로 해금했던 기록이에요. 이제는 시·군·구를 하나씩 방문해서 해금해요. 예전 포스트와 건물은 그대로 남아 있어요.'+
+        (lg && lg.mappedTo && REG[lg.mappedTo] ? ' 해금할 때 기록된 위치가 있어서 <b>'+escapeHtml(REG[lg.mappedTo].name)+'</b>은(는) 해금된 상태로 옮겼어요.' : '')+'</p>'+
+      '<div class="stat-row">'+
+        '<div class="stat-tile"><div class="v">'+posts.length+'</div><div class="l">이전 포스트</div></div>'+
+        '<div class="stat-tile"><div class="v">'+buildings.filter(Boolean).length+'</div><div class="l">이전 건물 수</div></div>'+
+      '</div>'+
+      '<button class="btn btn-secondary" id="decorateBtn">🏗️ 이전 건물 보기·꾸미기</button>'+
+      '<hr class="divider">'+
+      (posts.length? '<div class="feed">'+feedHtmlFor(posts)+'</div>' : '<p class="empty-note">이전 포스트가 없어요.</p>');
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    document.getElementById("decorateBtn").addEventListener("click", function(){ renderDecorateSheet(r, function(){ renderLegacySheet(r); }); });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; });
+  }
+
+  function renderDecorateSheet(r, onBack){
+    var buildings = state.buildings[r.code] || new Array(GRID_N*GRID_N).fill(null);
+    var selectedBuilding = null;
+    var html =
+      '<div class="sheet-head"><div>'+
+        '<h2>'+r.name+' 꾸미기</h2>'+
+        '<div class="coord">칸을 눌러 건물을 배치하거나 지워보세요</div>'+
+      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
+      '<div class="palette" id="palette"></div>'+
+      '<div class="grid4" id="grid"></div>'+
+      '<button class="btn btn-primary" id="backBtn">← 지역 정보로 돌아가기</button>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    document.getElementById("backBtn").addEventListener("click", function(){
+      if (onBack) onBack(); else renderUnlockedSheet(r, r.code===state.home);
+    });
+
+    var palEl = document.getElementById("palette");
+    BUILDINGS.forEach(function(b){
+      var btn = document.createElement("button");
+      btn.className = "pal-item"; btn.setAttribute("aria-pressed","false"); btn.textContent = b.icon; btn.title = b.name;
+      btn.addEventListener("click", function(){
+        selectedBuilding = (selectedBuilding===b.id) ? null : b.id;
+        Array.prototype.forEach.call(palEl.children, function(c){ c.setAttribute("aria-pressed","false"); });
+        if (selectedBuilding) btn.setAttribute("aria-pressed","true");
+      });
+      palEl.appendChild(btn);
+    });
+    var eraser = document.createElement("button");
+    eraser.className = "pal-item eraser"; eraser.setAttribute("aria-pressed","false"); eraser.textContent = "지우기";
+    eraser.addEventListener("click", function(){
+      selectedBuilding = (selectedBuilding==="__erase__") ? null : "__erase__";
+      Array.prototype.forEach.call(palEl.children, function(c){ c.setAttribute("aria-pressed","false"); });
+      if (selectedBuilding) eraser.setAttribute("aria-pressed","true");
+    });
+    palEl.appendChild(eraser);
+
+    var gridEl = document.getElementById("grid");
+    function renderGrid(){
+      gridEl.innerHTML = "";
+      for (var i=0;i<GRID_N*GRID_N;i++){
+        var cellVal = buildings[i];
+        var cell = document.createElement("button");
+        cell.className = "cell" + (cellVal? " filled":"");
+        var b = cellVal ? BUILDINGS.filter(function(x){return x.id===cellVal;})[0] : null;
+        cell.textContent = b ? b.icon : "";
+        (function(idx){
+          cell.addEventListener("click", function(){
+            var oldVal = buildings[idx], hadGrid = !!state.buildings[r.code];
+            if (selectedBuilding === "__erase__"){ buildings[idx] = null; }
+            else if (selectedBuilding){ buildings[idx] = selectedBuilding; }
+            else { return; }
+            state.buildings[r.code] = buildings;
+            if (!saveState()){ buildings[idx] = oldVal; if (!hadGrid) delete state.buildings[r.code]; } // 저장 실패 → 되돌림
+            renderGrid();
+          });
+        })(i);
+        gridEl.appendChild(cell);
+      }
+    }
+    renderGrid();
+  }
+
+  /* ---------------- 도감 ---------------- */
+  // 시·도별로 해금 단위를 모아 보여준다. 지도에서 누르기 힘든 작은 지역도 여기서 고른다.
+  function fmtDate(ms){
+    if (ms == null || ms < 1e12) return null; // 2001년 이전 값은 기록 오류로 보고 날짜 없음 처리
+    var d = new Date(ms);
+    return d.getFullYear()+". "+(d.getMonth()+1)+". "+d.getDate()+".";
+  }
+  function unlockDateText(u, withTest){
+    if (!u) return "";
+    var d = fmtDate(u.at);
+    return (d ? d+" 해금" : "이전 버전에서 해금 (날짜 기록 없음)") + (withTest && u.test ? " · 🧪 테스트" : "");
+  }
+  function dexRowHtml(r){
+    var st = unitStatus(r.code), u = state.unlocks[r.code];
+    return '<button class="dex-row'+(u ? ' done' : '')+'" data-code="'+r.code+'">'+
+      '<span class="dex-name">'+escapeHtml(r.name)+'</span>'+
+      '<span class="dex-meta">'+(u ? escapeHtml(unlockDateText(u)) : '아직 방문 전')+'</span>'+
+      '<span class="region-tag '+st.cls+'">'+st.text+'</span>'+
+    '</button>';
+  }
+  var dexOpen = {};       // 펼쳐 둔 시·도 (화면을 다시 그려도 유지)
+  var dexInitDone = false;
+  function renderDex(){
+    var q = document.getElementById("dexSearch").value.trim();
+    if (!dexInitDone){ var hs = homeSidoCode(); if (hs) dexOpen[hs] = true; dexInitDone = true; }
+    var n = unlockedUnitCount();
+    document.getElementById("dexSummary").textContent = n+" / "+TOTAL_UNITS+" 해금";
+    var html = SIDO.map(function(s){
+      var units = s.children ? s.children.slice().sort(function(a, b){ return a.name.localeCompare(b.name, "ko"); }) : [s];
+      var shown = q ? units.filter(function(r){ return r.name.indexOf(q) >= 0 || s.name.indexOf(q) >= 0; }) : units;
+      if (!shown.length) return "";
+      var pr = sidoProgress(s);
+      var open = q ? true : !!dexOpen[s.code];
+      return '<details class="dex-sido"'+(open ? ' open' : '')+' data-sido="'+s.code+'">'+
+        '<summary><span class="dex-sido-name">'+escapeHtml(s.name)+'</span>'+
+          '<span class="dex-bar"><i style="width:'+Math.round(pr.n/pr.total*100)+'%"></i></span>'+
+          '<span class="mono dex-count">'+pr.n+'/'+pr.total+'</span></summary>'+
+        '<div class="dex-rows">'+shown.map(dexRowHtml).join("")+'</div>'+
+      '</details>';
+    }).join("");
+    document.getElementById("dexList").innerHTML = html || '<p class="empty-note">"'+escapeHtml(q)+'"(으)로 찾은 지역이 없어요.</p>';
+  }
+  document.getElementById("dexSearch").addEventListener("input", renderDex);
+  document.getElementById("dexList").addEventListener("click", function(e){
+    var b = e.target.closest(".dex-row");
+    if (b) openRegion(b.getAttribute("data-code"));
+  });
+  document.getElementById("dexList").addEventListener("toggle", function(e){
+    var d = e.target;
+    if (d.classList && d.classList.contains("dex-sido") && !document.getElementById("dexSearch").value.trim()){
+      dexOpen[d.getAttribute("data-sido")] = d.open;
+    }
+  }, true);
+
+  /* ---------------- 챌린지 ---------------- */
+  function renderChallenges(){
+    var done = CHALLENGES.filter(function(c){ return isUnlocked(c.code); }).length;
+    document.getElementById("chalSummary").textContent = done+" / "+CHALLENGES.length+" 성공";
+    document.getElementById("chalList").innerHTML = CHALLENGES.map(function(c){
+      var u = state.unlocks[c.code];
+      return '<div class="chal-card'+(u ? ' done' : '')+'">'+
+        '<div class="chal-top"><span class="chal-star">'+(u ? '🏆' : '⭐')+'</span>'+
+          '<div class="chal-title"><h3>'+escapeHtml(c.name)+'</h3><span class="coord">'+escapeHtml(REG[c.parent].name)+'</span></div>'+
+          (u ? '<span class="region-tag '+(u.test ? 'tag-test' : 'tag-unlocked')+'">'+(u.test ? '🧪 테스트 성공' : '✅ 성공')+'</span>' : '')+
+        '</div>'+
+        '<p class="chal-desc">'+escapeHtml(c.desc)+'</p>'+
+        (u ? '<p class="chal-date">'+escapeHtml(unlockDateText(u, true))+'</p>' : '')+
+        '<button class="btn '+(u ? 'btn-secondary' : 'btn-primary')+'" data-code="'+c.code+'">'+(u ? '기록 보기' : '도전하기')+'</button>'+
+      '</div>';
+    }).join("");
+  }
+  document.getElementById("chalList").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-code]");
+    if (b) openRegion(b.getAttribute("data-code"));
+  });
+
+  // 해금 등으로 상태가 바뀌면 지금 보고 있는 도감·챌린지 화면도 다시 그린다
+  function refreshSideViews(){
+    if (currentTab === "dex") renderDex();
+    else if (currentTab === "chal") renderChallenges();
+  }
+
+  /* ---------------- 해금 도장 연출 (2초 이내) ---------------- */
+  // kind: "unlock" | "home" | "test" | "challenge"
+  function showStamp(name, kind){
+    var LABEL = { unlock:"해금", home:"여행 시작", test:"TEST", challenge:"챌린지 성공" };
+    var old = document.querySelector(".stamp-wrap");
+    if (old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.className = "stamp-wrap stamp-"+(kind || "unlock");
+    wrap.setAttribute("role", "status");
+    wrap.innerHTML =
+      '<div class="stamp">'+
+        '<span class="stamp-top">'+(kind === "challenge" ? "★ KOREA ★" : "KOREA TRAVELER")+'</span>'+
+        '<span class="stamp-name"></span>'+
+        '<span class="stamp-label">'+LABEL[kind || "unlock"]+'</span>'+
+        '<span class="stamp-date">'+fmtDate(Date.now())+'</span>'+
+      '</div>';
+    wrap.querySelector(".stamp-name").textContent = name;
+    document.body.appendChild(wrap);
+    setTimeout(function(){ wrap.remove(); }, 1900);
+  }
+
+  /* ---------------- tabs ---------------- */
+  var currentTab = "map";
+  function switchTab(tab){
+    if (tab === currentTab) return;
+    if (scrimEl) closeSheet();
+    currentTab = tab;
+    var VIEWS = { map:"viewMap", dex:"viewDex", chal:"viewChal", settings:"viewSettings" };
+    Object.keys(VIEWS).forEach(function(k){ document.getElementById(VIEWS[k]).hidden = tab !== k; });
+    Array.prototype.forEach.call(document.querySelectorAll(".tabbar [role=tab]"), function(b){
+      b.setAttribute("aria-selected", b.getAttribute("data-tab") === tab ? "true" : "false");
+    });
+    window.scrollTo(0, 0);
+    if (tab === "settings") renderSettings();
+    else if (tab === "dex") renderDex();
+    else if (tab === "chal") renderChallenges();
+    // 지도가 숨겨진 동안 그려졌다면 라벨·배지 크기 계산을 다시 한다
+    else if (!document.getElementById("mapCard").hidden) applyZoom(false);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".tabbar [role=tab]"), function(b){
+    b.addEventListener("click", function(){ switchTab(b.getAttribute("data-tab")); });
+  });
+
+  function sheetHead(title, sub){
+    return '<div class="sheet-head"><div><h2>'+title+'</h2>'+(sub ? '<div class="coord">'+sub+'</div>' : '')+
+      '</div><button class="close-x" id="closeBtn">✕</button></div>';
+  }
+
+  /* ---------------- settings: 위치 권한 ---------------- */
+  var PERM_LABEL = { granted:"허용됨", denied:"거부됨", prompt:"아직 묻지 않음", "prompt-with-rationale":"아직 묻지 않음" };
+  function capGeoPlugin(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation; }
+  function checkLocationPermission(){
+    var capGeo = capGeoPlugin();
+    if (IS_NATIVE && capGeo && capGeo.checkPermissions){
+      return capGeo.checkPermissions().then(function(s){ return s.location || s.coarseLocation || "unknown"; }, function(){ return "unknown"; });
+    }
+    if (navigator.permissions && navigator.permissions.query){
+      return navigator.permissions.query({name:"geolocation"}).then(function(s){ return s.state; }, function(){ return "unknown"; });
+    }
+    return Promise.resolve("unknown");
+  }
+  var DENIED_HELP = IS_NATIVE
+    ? "권한 창이 다시 뜨지 않으면 휴대폰 설정 › 애플리케이션 › 코리아 트래블러 › 권한 › 위치에서 '앱 사용 중에만 허용'을 선택해주세요."
+    : "브라우저 주소창 왼쪽의 사이트 설정에서 위치 권한을 허용해주세요.";
+  function renderPermission(note){
+    checkLocationPermission().then(function(st){
+      var el = document.getElementById("permState");
+      el.textContent = PERM_LABEL[st] || "확인할 수 없음";
+      el.className = st === "granted" ? "perm-granted" : (st === "denied" ? "perm-denied" : "");
+      document.getElementById("permNote").textContent = note || (st === "denied" ? DENIED_HELP : "");
+    });
+  }
+  document.getElementById("btnPermRequest").addEventListener("click", function(){
+    var capGeo = capGeoPlugin();
+    if (IS_NATIVE && capGeo && capGeo.requestPermissions){
+      capGeo.requestPermissions({ permissions:["location"] }).then(function(s){
+        renderPermission(s.location === "granted" ? "위치 권한이 허용됐어요." : (s.location === "denied" ? DENIED_HELP : ""));
+      }, function(){
+        renderPermission("권한을 요청하지 못했어요. 휴대폰의 위치 서비스(GPS)가 켜져 있는지 확인해주세요.");
+      });
+      return;
+    }
+    // 브라우저: 위치를 한 번 요청하면 권한 창이 뜬다
+    if (!("geolocation" in navigator)){ renderPermission("이 브라우저는 위치 기능을 지원하지 않아요."); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(){ renderPermission("위치 권한이 허용됐어요."); },
+      function(){ renderPermission(); },
+      { enableHighAccuracy:false, timeout:8000, maximumAge:0 }
+    );
+  });
+
+  /* ---------------- settings: 화면 테마 ---------------- */
+  function loadPrefs(){ try{ return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") || {}; }catch(e){ return {}; } }
+  function savePrefs(p){ try{ localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }catch(e){} }
+  function applyTheme(t){
+    var root = document.documentElement;
+    if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
+    else root.removeAttribute("data-theme");
+  }
+  function renderThemeSeg(){
+    var t = loadPrefs().theme || "system";
+    Array.prototype.forEach.call(document.querySelectorAll("#themeSeg [data-theme-opt]"), function(b){
+      b.setAttribute("aria-checked", b.getAttribute("data-theme-opt") === t ? "true" : "false");
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#themeSeg [data-theme-opt]"), function(b){
+    b.addEventListener("click", function(){
+      var t = b.getAttribute("data-theme-opt");
+      var p = loadPrefs(); p.theme = t; savePrefs(p);
+      applyTheme(t);
+      renderThemeSeg();
+    });
+  });
+
+  /* ---------------- settings: 백업 / 복원 / 초기화 ---------------- */
+  function fmtBytes(n){ return n < 1024 ? n+"B" : (n < 1048576 ? (n/1024).toFixed(1)+"KB" : (n/1048576).toFixed(2)+"MB"); }
+  function byteLen(s){ try{ return new Blob([s]).size; }catch(e){ return s.length; } }
+  function fileStamp(){
+    var d = new Date();
+    function p(n){ return (n<10?"0":"")+n; }
+    return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+p(d.getHours())+p(d.getMinutes());
+  }
+  function backupJson(){
+    return JSON.stringify({ app:"koreatraveler", kind:"backup", format:1, appVersion:APP_VERSION,
+                            exportedAt:new Date().toISOString(), state:state });
+  }
+  function stateSummary(s){
+    var m = { unlocked:0, test:0, posts:0, builds:0 };
+    Object.keys(s.unlocks || {}).forEach(function(k){ m.unlocked++; if (s.unlocks[k] && s.unlocks[k].test) m.test++; });
+    Object.keys(s.posts || {}).forEach(function(k){ m.posts += (s.posts[k] || []).filter(function(p){ return p && !p.seed; }).length; });
+    Object.keys(s.buildings || {}).forEach(function(k){ m.builds += placedCount(s.buildings[k]); });
+    return "해금 "+m.unlocked+"곳"+(m.test ? " (🧪 테스트 "+m.test+")" : "")+" · 포스트 "+m.posts+"개 · 건물 "+m.builds+"개";
+  }
+  function copyText(text, fallbackEl){
+    var p = (navigator.clipboard && navigator.clipboard.writeText) ? navigator.clipboard.writeText(text) : Promise.reject();
+    return p.catch(function(){
+      if (fallbackEl){ fallbackEl.focus(); fallbackEl.select(); if (document.execCommand && document.execCommand("copy")) return; }
+      throw new Error("copy failed");
+    });
+  }
+  // 덮어쓰기 직전 상태를 한 단계 보관한다. 저장 공간이 없으면 false — 이때는 덮어쓰지 않는다.
+  function keepPrev(){
+    try{ localStorage.setItem(STATE_KEY_PREV, JSON.stringify({ savedAt:new Date().toISOString(), state:state })); return true; }
+    catch(e){ return false; }
+  }
+  var NO_SPACE_FOR_PREV = "저장 공간이 부족해 지금 기록을 보관할 수 없어요. 먼저 백업을 내보낸 뒤 다시 시도해주세요.";
+
+  function renderExportSheet(){
+    var json = backupJson();
+    var html =
+      sheetHead("백업 내보내기", stateSummary(state)+" · "+fmtBytes(byteLen(json)))+
+      '<p class="set-note">백업에는 해금한 위치 좌표와 사진이 들어 있어요. 다른 사람에게 보낼 때 주의해주세요.</p>'+
+      (IS_NATIVE
+        ? '<p class="set-note">앱에서는 파일로 바로 저장할 수 없어요. 아래 내용을 복사해서 메모 앱이나 메신저의 \'나와의 채팅\'에 붙여 넣어 보관하세요.</p>'
+        : '<button class="btn btn-primary" id="btnSaveFile">📁 JSON 파일로 저장</button>')+
+      '<button class="btn btn-secondary" id="btnCopyBackup">📋 클립보드에 복사</button>'+
+      '<textarea class="json-box" id="backupText" readonly></textarea>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    var ta = document.getElementById("backupText");
+    ta.value = json;
+    var saveBtn = document.getElementById("btnSaveFile");
+    if (saveBtn) saveBtn.addEventListener("click", function(){
+      var url = URL.createObjectURL(new Blob([json], { type:"application/json" }));
+      var a = document.createElement("a");
+      a.href = url; a.download = "kr-traveler-backup-"+fileStamp()+".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+      toast("백업 파일을 저장했어요", "📁");
+    });
+    document.getElementById("btnCopyBackup").addEventListener("click", function(){
+      copyText(json, ta).then(function(){ toast("백업을 클립보드에 복사했어요", "📋"); },
+                              function(){ toast("복사하지 못했어요. 텍스트를 길게 눌러 직접 복사해주세요", "⚠️"); });
+    });
+  }
+
+  function parseBackup(text){
+    var obj = JSON.parse(text);
+    if (!obj || typeof obj !== "object") throw new Error("format");
+    var s = (obj.kind === "backup" && obj.state) ? obj.state : obj;
+    if ((s.version === 3 || s.version === 2) && (!s.unlocks || typeof s.unlocks !== "object")) throw new Error("format");
+    return upgradeState(s); // v1·v2 백업도 받아서 v3 로 이전
+  }
+
+  function renderImportSheet(){
+    var html =
+      sheetHead("백업 복원", "지금 기록: "+stateSummary(state))+
+      '<p class="set-note">JSON 파일을 고르거나 백업 내용을 붙여 넣어주세요. 복원하면 지금 기록을 덮어써요. 덮어쓰기 직전 상태는 한 단계 보관돼요.</p>'+
+      '<div class="file-row"><label for="importFile">📁 파일 선택</label><input type="file" id="importFile" accept="application/json,.json,text/plain"></div>'+
+      '<textarea class="json-box" id="importText" placeholder="여기에 백업 내용을 붙여 넣기..."></textarea>'+
+      '<button class="btn btn-secondary" id="btnImportCheck">🔍 내용 확인</button>'+
+      '<p class="status-line" id="importStatus"></p>'+
+      '<div id="importConfirm"></div>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    var ta = document.getElementById("importText");
+    var statusEl = document.getElementById("importStatus");
+    var confirmEl = document.getElementById("importConfirm");
+    function check(){
+      confirmEl.innerHTML = "";
+      var parsed;
+      try{ parsed = parseBackup(ta.value.trim()); }
+      catch(e){ statusEl.textContent = "코리아 트래블러 백업 형식이 아니에요. 내용을 다시 확인해주세요."; return; }
+      statusEl.textContent = "";
+      confirmEl.innerHTML =
+        '<div class="summary-box">복원할 백업: <b>'+escapeHtml(stateSummary(parsed))+'</b><br>지금 기록: '+escapeHtml(stateSummary(state))+'</div>'+
+        '<button class="btn btn-primary" id="btnImportApply" style="margin-top:10px; width:100%;">덮어쓰고 복원</button>';
+      document.getElementById("btnImportApply").addEventListener("click", function(){
+        if (!keepPrev()){ toast(NO_SPACE_FOR_PREV, "⚠️"); return; }
+        state = parsed;
+        if (saveState()) location.reload();
+      });
+    }
+    document.getElementById("btnImportCheck").addEventListener("click", check);
+    document.getElementById("importFile").addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){ ta.value = String(ev.target.result || ""); check(); };
+      reader.onerror = function(){ statusEl.textContent = "파일을 읽지 못했어요."; };
+      reader.readAsText(f);
+    });
+  }
+
+  var RESET_WORD = "초기화";
+  // wipeAll=false: 사용자 기록 초기화 (빈 v2 를 저장해 v1 백업이 다시 이전되지 않게 한다)
+  // wipeAll=true : 개발자 전체 초기화 (v2·v1·직전 상태·설정 키 모두 삭제 → 새로 설치한 상태)
+  function renderResetSheet(wipeAll){
+    if (wipeAll && !DEV) return;
+    var html =
+      sheetHead(wipeAll ? "전체 초기화 (개발자)" : "기록 초기화", "지금 기록: "+stateSummary(state))+
+      '<p class="set-note">'+(wipeAll
+        ? "v2 기록, v1 백업, 직전 상태, 화면 테마 설정까지 모두 지워서 앱을 새로 설치한 상태로 만들어요. 되돌릴 수 없어요."
+        : "해금 기록·포스트·건물이 모두 지워져요. 지우기 직전 상태는 한 단계 보관되지만, 꼭 필요한 기록이면 먼저 백업을 내보내주세요.")+'</p>'+
+      '<input class="confirm-input" id="resetInput" placeholder="계속하려면 \''+RESET_WORD+'\'를 입력하세요" autocomplete="off">'+
+      '<button class="btn btn-danger" id="btnResetApply" disabled>'+(wipeAll ? "💣 전체 초기화" : "🗑️ 기록 초기화")+'</button>';
+    openSheet(html);
+    document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    var input = document.getElementById("resetInput");
+    var applyBtn = document.getElementById("btnResetApply");
+    input.addEventListener("input", function(){ applyBtn.disabled = input.value.trim() !== RESET_WORD; });
+    applyBtn.addEventListener("click", function(){
+      if (input.value.trim() !== RESET_WORD) return;
+      if (wipeAll){
+        [STATE_KEY, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, "kr-traveler-state-v3-prev", "kr-traveler-state-v2-prev", PREFS_KEY].forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+        location.reload();
+        return;
+      }
+      if (!keepPrev()){ toast(NO_SPACE_FOR_PREV, "⚠️"); return; }
+      state = emptyState();
+      if (saveState()) location.reload();
+    });
+  }
+
+  document.getElementById("btnExport").addEventListener("click", renderExportSheet);
+  document.getElementById("btnImport").addEventListener("click", renderImportSheet);
+  document.getElementById("btnReset").addEventListener("click", function(){ renderResetSheet(false); });
+
+  /* ---------------- settings: 개발자 (dev 빌드에서만) ---------------- */
+  function stateForDisplay(){
+    return JSON.stringify(state, function(k, v){
+      if (k === "photo" && typeof v === "string" && v.length > 200) return "(사진 "+fmtBytes(v.length)+")";
+      return v;
+    }, 2);
+  }
+  if (DEV){
+    document.getElementById("btnDevUnlockAll").addEventListener("click", function(){
+      if (!window.confirm("아직 잠긴 곳(챌린지 포함)을 모두 🧪 테스트 해금할까요?")) return;
+      var n = 0;
+      var added = [];
+      UNITS.concat(CHALLENGES).forEach(function(r){
+        if (isUnlocked(r.code)) return;
+        state.unlocks[r.code] = { at:Date.now(), lon:r.lp[0], lat:r.lp[1], acc:0, test:true, via:"dev-all" };
+        added.push(r.code); n++;
+      });
+      if (!saveState()){ added.forEach(function(c){ delete state.unlocks[c]; }); return; }
+      if (document.getElementById("mapCard").hidden) showMapView(); else renderMap();
+      toast(n+"곳을 테스트 해금했어요", "🧪");
+    });
+    document.getElementById("btnDevWipe").addEventListener("click", function(){ renderResetSheet(true); });
+    document.getElementById("btnDevState").addEventListener("click", function(){
+      var keys = [STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, PREFS_KEY].map(function(k){
+        var has = false; try{ has = localStorage.getItem(k) !== null; }catch(e){}
+        return k+": "+(has ? "있음" : "없음");
+      }).join(" · ");
+      var text = stateForDisplay();
+      openSheet(
+        sheetHead("저장된 상태", STATE_KEY+" · "+fmtBytes(byteLen(JSON.stringify(state))))+
+        '<p class="set-note mono" style="font-size:11px;">'+keys+'</p>'+
+        '<button class="btn btn-secondary" id="btnCopyState">📋 복사</button>'+
+        '<pre class="json-box" id="stateText"></pre>'
+      );
+      document.getElementById("closeBtn").addEventListener("click", closeSheet);
+      document.getElementById("stateText").textContent = text;
+      document.getElementById("btnCopyState").addEventListener("click", function(){
+        copyText(text, null).then(function(){ toast("복사했어요", "📋"); }, function(){ toast("복사하지 못했어요", "⚠️"); });
+      });
+    });
+  }
+
+  function renderSettings(){
+    renderPermission();
+    renderThemeSeg();
+    document.getElementById("storageUsage").textContent = "약 "+fmtBytes(storageUsageBytes());
+    document.getElementById("appVersion").textContent = APP_VERSION+" · "+(DEV ? "dev" : "user")+" · "+(IS_NATIVE ? "앱" : "브라우저");
+  }
+
+  /* ---------------- boot ---------------- */
+  document.getElementById("unitTotal").textContent = "/"+TOTAL_UNITS;
+  document.getElementById("lockedCountText").textContent = String(TOTAL_UNITS-1);
+  if (state.home || Object.keys(state.unlocks).length){
+    showMapView();
+    if (state.migratedFrom && !state.migrationNoticed){
+      state.migrationNoticed = true;
+      saveState();
+      toast("지역 구성이 바뀌었어요: 특별·광역시는 1곳, 울릉도·독도는 챌린지로. 예전 기록은 그대로 옮겼어요", "🗺️");
+    }
+  }
+
+  // 자동 점검용 — dev 빌드에서만 노출
+  if (DEV){
+    window.__kt = { migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
+                    REG:REG, UNITS:UNITS, state:function(){ return state; },
+                    devMode:function(){ return devMode; }, simulatedPoint:function(){ return simulatedPoint; } };
+  }
+})();
+</script>
+
+</body>
+</html>

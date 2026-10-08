@@ -1,0 +1,31 @@
+# ---- 요청: 앱 설치 파일, 빌드 결과물, 서명 키, PDF ----
+*.apk
+*.aab
+dist/
+*.keystore
+*.jks
+*.pdf
+
+# ---- 다시 만들 수 있는 것 ----
+# 빌드 스크립트(tools/build-apk.sh)가 만드는 작업용 복사본
+build/
+# apktool b 가 appFolder 안에 만드는 작업 폴더
+appFolder/build/
+# npm 패키지 (tools/mapdata 에서 npm install 로 다시 설치)
+node_modules/
+
+# ---- 저장소에 넣지 않는 것 (README 참고) ----
+# 원본 그대로의 appFolder 복사본 (원본 index.html 은 backup/index.v1.html 에 있음)
+appFolder_backup/
+# 행정구역 원본 GeoJSON 34MB — README 의 주소에서 다시 받는다
+geo-src/
+# 외부 도구 — 각자 설치
+apktool.jar
+apktool.bat
+# IDE 개인 설정
+.idea/
+
+# ---- 기타 ----
+*.idsig
+.DS_Store
+Thumbs.db
