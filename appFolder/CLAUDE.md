@@ -76,8 +76,11 @@
 | ~~지역 꾸미기(건물 짓기)~~, ~~"📜 이전 기록" 화면~~ | — | **2026-10-08 제거** (재설계 후 재추가 예정). 저장된 `posts`·`buildings`·`legacy` 는 지우지 않고 그대로 보존 |
 | 빌드 모드 | `<head>`의 `BUILD_MODE`("dev"/"user") → `DEV`. user면 `[data-dev-only]` 요소를 DOM에서 제거 | 원본은 항상 `"dev"` |
 | 테스트 모드 (dev 전용): 가상 위치, 더블 탭 즉시 해금 | `setDevMode`, `moveSimulatedTo`, `handleMapTap`/`doubleTapUnlock` | user 빌드에서는 동작 안 함 |
-| 하단 탭(지도/도감/챌린지/설정), 설정: 위치 권한·테마·백업/복원·초기화·버전 | `switchTab`, `renderSettings`, `renderExportSheet`, `renderImportSheet`, `renderResetSheet` | 동작 (앱에선 파일 저장 불가 → 클립보드 복사) |
+| 하단 탭(지도/도감/[랜덤Pick]/챌린지/설정), 설정: 위치 권한·테마·백업/복원·초기화·버전 | `switchTab`, `renderSettings`, `renderExportSheet`, `renderImportSheet`, `renderResetSheet` | 동작 (앱에선 파일 저장 불가 → 클립보드 복사) |
 | 위치 정확도 검사 | `ACCURACY_LIMIT_M`(100m), `poorAccuracy`, `maximumAge:0` | 동작 |
+| **랜덤Pick**: 가운데 탭 버튼 → 지도를 길게 눌러 마커펜을 당김(최대 1.2초, 최대로 당기면 떨림) → 놓으면 회전·포물선 비행 → 꽂힌 자리에 손그림 원 → 그 해금 단위로 확대·강조 → 상단 "오늘의 Pick" 바, ✕로 원래 화면 복귀 | `startPick`, `pickTarget`, `launchPen`, `landPen`, `zoomToPick`, `closePick` | 동작. 해금·챌린지·저장 구조는 바꾸지 않음 (화면 연출만). pointer 이벤트, 모드 중 `touch-action:none`·컨텍스트 메뉴 차단, 지역 상세 열기·더블 탭 해금 비활성, 동작 줄이기 대응, 색은 `--marker`/`--marker-soft` |
+| 랜덤Pick 뽑기 규칙 | `pickTarget`, `pickExclusions`, `rnd` | 결과는 누른 위치·당긴 세기와 무관 (세기는 비행 높이·속도만). 난수 `crypto.getRandomValues`. 지도 화면(SVG 좌표, 표시용 섬 배치 포함)에서 균일하게 점을 뽑아 **화면 면적 비례**. 판정은 해금 단위(`UNITS`) 화면 다각형 계산식(`isPointInFill` 과 결과 동일, `__kt.pickSample(n)` 으로 점검). 바다·제외 지역이면 다시 뽑고 400번을 넘으면 남은 후보를 면적 비례로 직접 고름 |
+| 랜덤Pick 제외 규칙 (Pick 할 때마다 그 시점 상태로 새로 계산) | `pickExclusions` | ① 해금한 해금 단위(`state.unlocks`, 테스트 해금 포함) ② 홈(`state.home` 이 해금 단위 코드일 때만 — 시·도 단위의 옛 홈은 제외하지 않음) ③ 챌린지 섬 영역(`MAP_CHALLENGE.regions` 6곳의 다각형, 성공 여부 무관 — 섬 영역만 빼고 인천 1곳은 후보에 남음). 후보가 0이면 "모든 지역을 정복했어요!" 안내 후 모드 종료 |
 | 저장 | `localStorage["kr-traveler-state-v4"]` (아래 데이터 구조 참고, v1~v3는 백업으로 유지) | 기기 내 저장만 |
 
 ### 데이터 구조 (2026-10-08 v4: 광역시 1곳 통합 + 챌린지)
@@ -98,7 +101,7 @@
   - **울릉군(47940)은 일반 지역에서 빼고 챌린지로만** (`EXCLUDE_UNITS`). 백령도 등 서해5도는 인천 1곳과 별개로 챌린지 추가
 - 해금 단위 수 = **160** (`TOTAL_UNITS`): 서울1 전남광주23 부산1 대구1 인천1 대전1 울산1 세종1 경기31 충북11 충남15 경북21 경남18 제주2 강원18 전북14. 챌린지 6은 따로 센다
 - 위치 판정: `findRegionForPoint`(160 단위)와 `findChallengeForPoint`(챌린지)를 따로 한다. bbox 선필터, 실패 시 2km 안 최근접
-- 화면: 하단 탭 **지도 / 도감 / 챌린지 / 설정**. 도감(`renderDex`)은 시·도별 목록·검색·해금 날짜, 챌린지(`renderChallenges`)는 카드. 해금 시 도장 연출(`showStamp`, 1.8초, 모션 줄이기 설정 대응)
+- 화면: 하단 탭 **지도 / 도감 / [랜덤Pick] / 챌린지 / 설정** (가운데는 동작 버튼, 탭이 아님). 도감(`renderDex`)은 시·도별 목록·검색·해금 날짜, 챌린지(`renderChallenges`)는 카드. 해금 시 도장 연출(`showStamp`, 1.8초, 모션 줄이기 설정 대응)
 - 저장 실패(용량 초과): `saveStateQuiet`로 확인 → 실패하면 방금 바꾼 것(해금 등)을 되돌리고 화면에 알림
 - 투영: 위경도 등장방형, 경도에 cos(중앙 위도) 보정. SVG 경로는 실행 시 `pathFor(region)`로 생성
 - **표시용 섬 배치(`DISPLAY_RULES`)**: 모바일에서 지도를 크게 보이려고 먼 섬(서해5도·가거·흑산·격렬비열·울릉·독도·제주·추자)을 내륙 쪽으로 옮기고 키운다. **화면 표시(`displayPolys`/`displayPoint`/`displayBBox`)에만 적용**하고, 위치 판정·이전·가상 위치는 반드시 실제 좌표(`r.polys`, `r.lp`)를 쓴다. 챌린지 섬은 보이지 않는 터치 영역(`chal-hit`, 반지름 16px)을 두고, 여러 개가 겹치면 "이 근처 챌린지" 선택 창을 띄운다
