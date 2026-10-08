@@ -189,11 +189,10 @@
     display:flex; align-items:center; gap:6px; padding:2px 4px 8px; flex-wrap:wrap;
   }
   .map-bar[hidden]{ display:none; }
-  .map-back, .map-legacy, .map-list{
+  .map-back, .map-list{
     border:1.5px solid var(--line); background:var(--bg); color:var(--ink);
     border-radius:999px; padding:6px 11px; font-size:12.5px; font-weight:700; flex:none;
   }
-  .map-legacy{ color:var(--gold); border-color:var(--gold); background:var(--gold-soft); }
   .map-title{ flex:1; min-width:120px; font-size:13px; font-weight:700; color:var(--ink); }
   .swatch-prog{ background:linear-gradient(90deg, var(--locked), var(--unlocked)); width:22px; }
   /* 하위 지역 목록 시트 */
@@ -207,7 +206,6 @@
   .sub-row-dev{ flex:none; width:42px; border:1.5px dashed var(--gold); background:var(--gold-soft); border-radius:10px; font-size:16px; }
   .legend-hint{ margin-left:auto; }
   .tag-test{ background:var(--gold-soft); color:var(--gold); }
-  .tag-legacy{ background:var(--gold-soft); color:var(--gold); }
   .btn.btn-dev{ border-style:dashed; border-color:var(--gold); color:var(--gold); background:var(--gold-soft); }
   .devpanel select[hidden]{ display:none; }
   footer .attrib{ font-size:10px; opacity:.8; }
@@ -327,12 +325,6 @@
   #map.zoomed .chal-path{ opacity:1; }
   #map .chal-hit{ fill:transparent; stroke:none; cursor:pointer; }
 
-  /* ---------- 저장 공간 초과 안내 ---------- */
-  .save-error{
-    background:var(--gold-soft); border:1.5px solid var(--accent); color:var(--ink); border-radius:12px;
-    padding:12px; font-size:13px; line-height:1.55; margin-bottom:8px;
-  }
-
   /* ---------- 해금 도장 (전체 1.8초) ---------- */
   .stamp-wrap{ position:fixed; inset:0; z-index:95; pointer-events:none; display:flex; align-items:center; justify-content:center; }
   .stamp{
@@ -420,57 +412,15 @@
 
   .coord{ font-size:11px; color:var(--ink-soft); }
 
-  .divider{ height:1px; background:var(--line); border:none; margin:2px 0; }
-
-  /* mission */
-  .mission-box{
-    background:var(--locked-soft); border-radius:12px; padding:12px; font-size:13px; color:var(--ink-soft); line-height:1.55;
-  }
+  /* 해금된 지역 상세: 해금 날짜 한 줄 (리뷰·건물 영역은 재설계 후 다시 추가) */
+  .unlock-date{ font-size:14px; font-weight:700; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  /* 백업 복원(텍스트 붙여넣기·파일 선택)에서 쓴다 */
   textarea{
     width:100%; min-height:74px; border-radius:10px; border:1.5px solid var(--line);
     background:var(--bg); color:var(--ink); padding:10px; font:inherit; font-size:13.5px; resize:vertical;
   }
   .file-row{ display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-soft); }
-  .photo-preview{ width:52px; height:52px; border-radius:8px; object-fit:cover; border:1px solid var(--line); }
-
-  /* feed */
-  .feed{ display:flex; flex-direction:column; gap:10px; }
-  .post{
-    display:flex; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--bg);
-  }
-  .avatar{
-    width:34px; height:34px; border-radius:50%; background:var(--unlocked-soft); color:var(--unlocked);
-    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex:none;
-  }
-  .post .who{ font-size:12.5px; font-weight:700; }
-  .post .when{ font-size:10.5px; color:var(--ink-soft); font-weight:400; margin-left:6px; }
-  .post .text{ font-size:13px; line-height:1.5; margin-top:2px; }
-  .post img.photo{ margin-top:6px; width:100%; max-height:160px; object-fit:cover; border-radius:8px; }
   .empty-note{ font-size:12.5px; color:var(--ink-soft); padding:10px 2px; }
-
-  /* decorate */
-  .grid4{
-    display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
-  }
-  .cell{
-    aspect-ratio:1; border-radius:10px; background:var(--locked-soft); border:1px dashed var(--line);
-    display:flex; align-items:center; justify-content:center; font-size:22px;
-  }
-  .cell.filled{ background:var(--unlocked-soft); border-style:solid; border-color:var(--unlocked); }
-  .palette{ display:flex; gap:8px; flex-wrap:wrap; }
-  .pal-item{
-    width:44px; height:44px; border-radius:10px; border:1.5px solid var(--line); background:var(--bg);
-    font-size:20px; display:flex; align-items:center; justify-content:center;
-  }
-  .pal-item[aria-pressed="true"]{ border-color:var(--accent); background:var(--gold-soft); }
-  .pal-item.eraser{ font-size:14px; color:var(--ink-soft); }
-
-  .stat-row{ display:flex; gap:8px; }
-  .stat-tile{
-    flex:1; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 10px;
-  }
-  .stat-tile .v{ font-family:'Space Mono',monospace; font-weight:700; font-size:16px; }
-  .stat-tile .l{ font-size:10.5px; color:var(--ink-soft); }
 
   /* toast */
   #toast-wrap{ position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom,0px) + 76px); display:flex; justify-content:center; z-index:80; pointer-events:none;}
@@ -514,8 +464,7 @@
 <main id="onboard" class="onboard">
   <h2>여행 여권을 펼쳐보세요</h2>
   <p>
-    처음에는 현재 위치한 지역 외 <span id="lockedCountText">32</span>개 지역(시·군·구)이 모두 잠겨 있어요. 시·도를 누르면 그 안의 시·군·구를 하나씩 열 수 있어요. 실제로 그 지역에 방문해서 미션(커뮤니티 포스트 작성)을 완료하면
-    지도가 열리고, 열린 지역 위에는 나만의 가상 건물을 지어 꾸밀 수 있어요.
+    처음에는 현재 위치한 지역 외 <span id="lockedCountText">32</span>개 지역(시·군·구)이 모두 잠겨 있어요. 시·도를 누르면 그 안의 시·군·구를 하나씩 열 수 있어요. 실제로 그 지역에 가서 위치를 확인하면 바로 열려요.
   </p>
   <button class="btn btn-primary" id="btnLocate">📍 내 위치로 시작하기</button>
   <button class="btn btn-ghost" id="btnDevStart" data-dev-only>위치 권한 없이 테스트 모드로 시작하기</button>
@@ -527,7 +476,6 @@
     <button class="map-back" id="btnZoomOut">← 전국</button>
     <span class="map-title" id="zoomTitle"></span>
     <button class="map-list" id="btnSubList">☰ 목록</button>
-    <button class="map-legacy" id="btnLegacy" hidden>📜 이전 기록</button>
   </div>
   <svg id="map" viewBox="0 0 800 760" role="img" aria-label="대한민국 지도"></svg>
   <div class="legend">
@@ -557,7 +505,7 @@
     <h2 class="settings-title">챌린지</h2>
     <span class="view-sub mono" id="chalSummary"></span>
   </div>
-  <p class="set-note">가기 쉽지 않은 특별한 섬들이에요. 전국 진행도와 따로 세고, 해금 방법은 같아요: 그 섬에서 위치를 확인하고 포스트를 남기면 성공!</p>
+  <p class="set-note">가기 쉽지 않은 특별한 섬들이에요. 전국 진행도와 따로 세고, 해금 방법은 같아요: 그 섬에서 위치를 확인하면 성공!</p>
   <div class="chal-list" id="chalList"></div>
 </section>
 
@@ -655,37 +603,8 @@
   var PREFS_KEY = "kr-traveler-prefs";              // 화면 테마 등. 게임 기록과 별도로 유지
   var ACCURACY_LIMIT_M = 100; // 위치 정확도 기준(m). 해금 판정 기준이므로 바꿀 때는 사용자 승인 (CLAUDE.md §5)
   var NEAREST_KM = 2;         // 경계 단순화 보정: 다각형 밖이어도 이 거리 안이면 가장 가까운 지역으로 판정
-  var GRID_N = 4; // 4x4 decorate grid
-  var BUILDINGS = [
-    {id:"house", icon:"🏠", name:"집"},
-    {id:"landmark", icon:"🏯", name:"랜드마크"},
-    {id:"cafe", icon:"☕", name:"카페"},
-    {id:"park", icon:"🌳", name:"공원"},
-    {id:"tower", icon:"🏢", name:"타워"},
-    {id:"plaza", icon:"⛲", name:"광장"},
-    {id:"market", icon:"🏮", name:"시장"},
-    {id:"temple", icon:"⛩️", name:"사찰"}
-  ];
-  var SEED_NAMES = ["여행자민지","길위의준호","떠도는하늘","지도채우기","가을바람","나침반유리"];
-
-  function seedPosts(code){
-    // deterministic-ish pseudo random pick based on code so it's stable across renders
-    var seedTexts = [
-      "여기 야경 진짜 최고예요 🌃 다들 꼭 들러보세요!",
-      "로컬 맛집 하나 발견! 다음에 또 오고 싶다 😋",
-      "미션 완료 도장 쾅! 다음 지역으로 출발합니다 🧭",
-      "생각보다 볼거리가 많아서 놀랐어요.",
-      "날씨 좋은 날 산책하기 딱이었어요 ☀️"
-    ];
-    var n = 1 + (parseInt(code,10) % 2);
-    var out = [];
-    for (var i=0;i<n;i++){
-      var idx = (parseInt(code,10)+i) % seedTexts.length;
-      var who = SEED_NAMES[(parseInt(code,10)+i*3) % SEED_NAMES.length];
-      out.push({who:who, text:seedTexts[idx], when:"예시", seed:true});
-    }
-    return out;
-  }
+  // 리뷰(포스트)·건물(꾸미기) 기능은 재설계 후 다시 추가할 예정이라 지금은 없다.
+  // 저장 데이터의 posts·buildings 는 지우지 않고 그대로 보존한다 (이전 코드: git 태그 before-remove-post-building).
 
   /* ---------------- regions ----------------
      MAP_SIDO (data/sido.js) : 시·도 16개. 하위 지역이 있는 시·도는 sub:1
@@ -743,7 +662,7 @@
 
   /* ---------------- state ----------------
      v3 = { version:3, home, unlocks{code:{at,lon,lat,acc,test,via}}, posts{}, buildings{}, legacy{} }
-     하위 지역이 있는 시·도 코드로 남은 포스트·건물은 그 시·도의 "📜 이전 기록"(legacy)으로 보여준다. */
+     하위 지역이 있는 시·도 코드로 남은 포스트·건물은 그 시·도 코드 그대로 보존한다 (지금은 화면에 표시하지 않음). */
   function emptyState(){ return { version:4, home:null, unlocks:{}, posts:{}, buildings:{}, legacy:{} }; }
 
   // v1 시·도 코드(통계청 옛 코드) -> 지금 코드 (광주 24 는 전남광주 안의 '광주' 1곳 12000 으로)
@@ -1392,13 +1311,9 @@
     var r = REG[zoomCode];
     mapBar.hidden = false;
     document.getElementById("zoomTitle").textContent = r.name+" · "+childUnlockedCount(r)+"/"+r.children.length+" 해금";
-    document.getElementById("btnLegacy").hidden = !state.legacy[zoomCode];
   }
   document.getElementById("btnZoomOut").addEventListener("click", zoomOut);
   window.addEventListener("resize", function(){ applyZoom(false); });
-  document.getElementById("btnLegacy").addEventListener("click", function(){
-    if (zoomCode) renderLegacySheet(REG[zoomCode]);
-  });
   document.getElementById("btnSubList").addEventListener("click", function(){
     if (zoomCode) renderSubListSheet(REG[zoomCode]);
   });
@@ -1666,11 +1581,10 @@
         '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
         '<div class="coord mono">'+escapeHtml(regionSubtitle(r))+'</div>'+
       '</div><button class="close-x" id="closeBtn">✕</button></div>'+
-      '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이 지역은 아직 방문하지 않았어요. 실제로 이 지역에 가서 확인하면 미션을 시작할 수 있어요.</p>'+
+      '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이 지역은 아직 방문하지 않았어요. 실제로 '+escapeHtml(r.name)+'에 가서 위치를 확인하면 바로 '+(r.challenge ? '챌린지 성공이에요.' : '열려요.')+'</p>'+
       (DEV && devMode ? '<button class="btn btn-secondary btn-dev" id="devHereBtn">🧪 여기로 가상 이동</button>' : '')+
-      '<button class="btn btn-secondary" id="checkHereBtn">🧭 지금 여기 있는지 확인하기</button>'+
-      '<p class="status-line" id="lockedStatus"></p>'+
-      '<div id="missionSlot"></div>';
+      '<button class="btn btn-primary" id="checkHereBtn">🧭 지금 여기 있는지 확인하기</button>'+
+      '<p class="status-line" id="lockedStatus"></p>';
     openSheet(html);
     document.getElementById("closeBtn").addEventListener("click", closeSheet);
     var devHereBtn = document.getElementById("devHereBtn");
@@ -1695,8 +1609,7 @@
         var hereUnit = findRegionForPoint(lon, lat), hereChal = findChallengeForPoint(lon, lat);
         var here = r.challenge ? hereChal : hereUnit;
         if (here && here.code === r.code){
-          statusEl.textContent = "";
-          renderMissionForm(r, pos);
+          unlockHere(r, pos, statusEl);
         } else {
           var where = hereChal ? hereChal.name+"(챌린지 섬)" : (hereUnit ? fullName(hereUnit) : null);
           statusEl.textContent = (where ? "현재 "+where+"에 계신 것으로 확인돼요." : "대한민국 영역 밖으로 확인됐어요.") + " "+r.name+"에 도착하면 다시 확인해주세요.";
@@ -1705,219 +1618,36 @@
     });
   }
 
-  function renderMissionForm(r, pos){
-    var slot = document.getElementById("missionSlot");
-    slot.innerHTML =
-      '<hr class="divider">'+
-      '<div class="mission-box">📍 도착 확인 완료! 미션: <b>커뮤니티 포스트 작성</b><br>이 지역에서의 순간을 짧은 글(+사진)로 남기면 지역이 잠금 해제돼요.</div>'+
-      '<textarea id="postText" placeholder="'+r.name+'에서의 순간을 적어보세요..." maxlength="300"></textarea>'+
-      '<div class="file-row"><label for="postPhoto">📷 사진 추가(선택)</label><input type="file" id="postPhoto" accept="image/*"><img id="photoPreview" class="photo-preview" hidden></div>'+
-      '<p class="status-line" id="photoInfo"></p>'+
-      '<button class="btn btn-primary" id="submitPostBtn">✅ 포스트 올리고 '+(r.challenge ? "챌린지 성공" : "잠금 해제")+'</button>'+
-      '<div id="saveError"></div>';
-    var photoData = null;
-    document.getElementById("postPhoto").addEventListener("change", function(e){
-      var f = e.target.files && e.target.files[0];
-      if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function(ev){
-        var tmpImg = new Image();
-        tmpImg.onload = function(){
-          var maxW = 480;
-          var scale = Math.min(1, maxW / tmpImg.width);
-          var cw = Math.max(1, Math.round(tmpImg.width*scale));
-          var ch = Math.max(1, Math.round(tmpImg.height*scale));
-          var canvas = document.createElement("canvas");
-          canvas.width = cw; canvas.height = ch;
-          var ctx = canvas.getContext("2d");
-          ctx.drawImage(tmpImg, 0, 0, cw, ch);
-          try{ photoData = canvas.toDataURL("image/jpeg", 0.72); }
-          catch(err){ photoData = ev.target.result; }
-          var img = document.getElementById("photoPreview");
-          img.src = photoData; img.hidden = false;
-          document.getElementById("photoInfo").textContent = "사진 약 "+fmtBytes(photoData.length)+" (480px로 줄여 저장해요)";
-        };
-        tmpImg.onerror = function(){
-          photoData = ev.target.result;
-          var img = document.getElementById("photoPreview");
-          img.src = photoData; img.hidden = false;
-        };
-        tmpImg.src = ev.target.result;
-      };
-      reader.readAsDataURL(f);
-    });
-    function submit(withPhoto){
-      var text = document.getElementById("postText").value.trim();
-      if (!text){ document.getElementById("postText").focus(); return; }
-      var hadUnlock = isUnlocked(r.code);
-      if (!addPost(r.code, text, withPhoto ? photoData : null, function(){ recordUnlock(r.code, pos); },
-                   function(){ if (!hadUnlock) delete state.unlocks[r.code]; })){
-        showSaveError(document.getElementById("saveError"), withPhoto && photoData ? photoData.length : 0, function(){ submit(false); });
-        return;
-      }
-      closeSheet();
-      showStamp(r.name, r.challenge ? "challenge" : "unlock");
+  // 현장 위치 확인에 성공하면 바로 해금한다 (리뷰·건물 기능은 재설계 후 다시 붙일 예정 — 태그 before-remove-post-building 참고)
+  // 저장에 실패하면 해금을 되돌리고 알린다 (조용히 실패하지 않는다)
+  function unlockHere(r, pos, statusEl){
+    var had = isUnlocked(r.code);
+    recordUnlock(r.code, pos);
+    if (!saveStateQuiet()){
+      if (!had) delete state.unlocks[r.code];
+      statusEl.textContent = "기기 저장 공간이 부족해 해금을 저장하지 못했어요. 설정 › 데이터 백업으로 기록을 보관한 뒤 다시 시도해주세요.";
+      return;
     }
-    document.getElementById("submitPostBtn").addEventListener("click", function(){ submit(true); });
+    closeSheet();
+    showStamp(r.name, r.challenge ? "challenge" : "unlock");
   }
 
-  // 포스트 추가 + 저장. 저장에 실패하면 추가한 것(과 함께 바꾼 상태)을 되돌리고 false.
-  function addPost(code, text, photo, alsoDo, undoAlso){
-    var prev = state.posts[code];
-    state.posts[code] = [{ who:"나", text:text, photo:photo||null, when:new Date().toLocaleDateString("ko-KR"), mine:true }].concat(prev || []);
-    if (alsoDo) alsoDo();
-    if (saveStateQuiet()) return true;
-    if (prev) state.posts[code] = prev; else delete state.posts[code];
-    if (undoAlso) undoAlso();
-    return false;
-  }
-  // 저장 공간 초과 안내 (사진이 있으면 사진 없이 다시 시도하는 버튼을 준다)
-  function showSaveError(slot, photoBytes, retryWithoutPhoto){
-    slot.innerHTML =
-      '<div class="save-error" role="alert">⚠️ 기기 저장 공간이 부족해 저장하지 못했어요.'+
-        (photoBytes ? ' 이 사진(약 '+fmtBytes(photoBytes)+')을 넣을 자리가 없어요.' : '')+
-        ' 지금 저장된 기록은 약 '+fmtBytes(storageUsageBytes())+'예요. 설정 › 데이터 백업으로 기록을 보관한 뒤 사진이 많은 포스트를 정리해주세요.</div>'+
-      (photoBytes && retryWithoutPhoto ? '<button class="btn btn-secondary" id="retryNoPhoto">사진 빼고 올리기</button>' : '');
-    var b = document.getElementById("retryNoPhoto");
-    if (b) b.addEventListener("click", retryWithoutPhoto);
-  }
-
-  function feedHtmlFor(posts){
-    return posts.map(function(p){
-      return '<div class="post"><div class="avatar">'+(p.mine?"나":escapeHtml(p.who.slice(0,1)))+'</div><div style="flex:1; min-width:0;">'+
-        '<span class="who">'+(p.mine?"나":escapeHtml(p.who))+'</span><span class="when">'+escapeHtml(p.when||"")+'</span>'+
-        '<div class="text">'+escapeHtml(p.text)+'</div>'+
-        (p.photo? '<img class="photo" src="'+p.photo+'">':'')+
-      '</div></div>';
-    }).join("");
-  }
-
+  // 해금된 지역: 이름, 홈 여부, 해금 날짜만 간단히
   function renderUnlockedSheet(r, isHome){
-    var buildings = state.buildings[r.code] || [];
-    var placedCount = buildings.filter(Boolean).length;
-    var myPosts = state.posts[r.code] || [];
-    var feed = myPosts.concat(seedPosts(r.code));
-    var feedHtml = feedHtmlFor(feed);
-
+    var u = state.unlocks[r.code];
     var html =
       '<div class="sheet-head"><div>'+
         unlockTag(r.code, isHome)+
         '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
         '<div class="coord mono">'+escapeHtml(regionSubtitle(r))+'</div>'+
       '</div><button class="close-x" id="closeBtn">✕</button></div>'+
-      '<div class="stat-row">'+
-        '<div class="stat-tile"><div class="v">'+myPosts.length+'</div><div class="l">내 포스트</div></div>'+
-        '<div class="stat-tile"><div class="v">'+placedCount+'</div><div class="l">건물 수</div></div>'+
-      '</div>'+
-      '<button class="btn btn-secondary" id="decorateBtn">🏗️ 이 지역 꾸미기</button>'+
-      '<hr class="divider">'+
-      '<h3 style="font-size:14px;">커뮤니티 피드</h3>'+
-      (feed.length? '<div class="feed">'+feedHtml+'</div>' : '<p class="empty-note">아직 포스트가 없어요.</p>')+
-      '<textarea id="extraPostText" placeholder="이 지역에 포스트 추가로 남기기..." maxlength="300"></textarea>'+
-      '<button class="btn btn-secondary" id="extraPostBtn">✏️ 포스트 남기기</button>'+
-      '<div id="saveError"></div>';
+      '<p class="unlock-date">📅 '+escapeHtml(unlockDateText(u))+'</p>';
     openSheet(html);
     document.getElementById("closeBtn").addEventListener("click", closeSheet);
-    document.getElementById("decorateBtn").addEventListener("click", function(){ renderDecorateSheet(r); });
-    document.getElementById("extraPostBtn").addEventListener("click", function(){
-      var t = document.getElementById("extraPostText").value.trim();
-      if (!t) return;
-      if (!addPost(r.code, t, null)){ showSaveError(document.getElementById("saveError"), 0, null); return; }
-      toast("포스트를 남겼어요", "📝");
-      renderUnlockedSheet(r, isHome);
-    });
-  }
-
-  // 이전 버전(v1)에서 시·도 단위로 해금했던 기록. 시·군은 잠근 채 포스트·건물만 보존해 보여준다.
-  function renderLegacySheet(r){
-    var lg = state.legacy[r.code];
-    var buildings = state.buildings[r.code] || [];
-    var posts = state.posts[r.code] || [];
-    var html =
-      '<div class="sheet-head"><div>'+
-        '<span class="region-tag tag-legacy">📜 이전 버전 기록</span>'+
-        '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
-        '<div class="coord mono">'+escapeHtml(r.name_eng || "")+'</div>'+
-      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
-      '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이전 버전에서 '+r.name+' 단위로 해금했던 기록이에요. 이제는 시·군·구를 하나씩 방문해서 해금해요. 예전 포스트와 건물은 그대로 남아 있어요.'+
-        (lg && lg.mappedTo && REG[lg.mappedTo] ? ' 해금할 때 기록된 위치가 있어서 <b>'+escapeHtml(REG[lg.mappedTo].name)+'</b>은(는) 해금된 상태로 옮겼어요.' : '')+'</p>'+
-      '<div class="stat-row">'+
-        '<div class="stat-tile"><div class="v">'+posts.length+'</div><div class="l">이전 포스트</div></div>'+
-        '<div class="stat-tile"><div class="v">'+buildings.filter(Boolean).length+'</div><div class="l">이전 건물 수</div></div>'+
-      '</div>'+
-      '<button class="btn btn-secondary" id="decorateBtn">🏗️ 이전 건물 보기·꾸미기</button>'+
-      '<hr class="divider">'+
-      (posts.length? '<div class="feed">'+feedHtmlFor(posts)+'</div>' : '<p class="empty-note">이전 포스트가 없어요.</p>');
-    openSheet(html);
-    document.getElementById("closeBtn").addEventListener("click", closeSheet);
-    document.getElementById("decorateBtn").addEventListener("click", function(){ renderDecorateSheet(r, function(){ renderLegacySheet(r); }); });
   }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; });
-  }
-
-  function renderDecorateSheet(r, onBack){
-    var buildings = state.buildings[r.code] || new Array(GRID_N*GRID_N).fill(null);
-    var selectedBuilding = null;
-    var html =
-      '<div class="sheet-head"><div>'+
-        '<h2>'+r.name+' 꾸미기</h2>'+
-        '<div class="coord">칸을 눌러 건물을 배치하거나 지워보세요</div>'+
-      '</div><button class="close-x" id="closeBtn">✕</button></div>'+
-      '<div class="palette" id="palette"></div>'+
-      '<div class="grid4" id="grid"></div>'+
-      '<button class="btn btn-primary" id="backBtn">← 지역 정보로 돌아가기</button>';
-    openSheet(html);
-    document.getElementById("closeBtn").addEventListener("click", closeSheet);
-    document.getElementById("backBtn").addEventListener("click", function(){
-      if (onBack) onBack(); else renderUnlockedSheet(r, r.code===state.home);
-    });
-
-    var palEl = document.getElementById("palette");
-    BUILDINGS.forEach(function(b){
-      var btn = document.createElement("button");
-      btn.className = "pal-item"; btn.setAttribute("aria-pressed","false"); btn.textContent = b.icon; btn.title = b.name;
-      btn.addEventListener("click", function(){
-        selectedBuilding = (selectedBuilding===b.id) ? null : b.id;
-        Array.prototype.forEach.call(palEl.children, function(c){ c.setAttribute("aria-pressed","false"); });
-        if (selectedBuilding) btn.setAttribute("aria-pressed","true");
-      });
-      palEl.appendChild(btn);
-    });
-    var eraser = document.createElement("button");
-    eraser.className = "pal-item eraser"; eraser.setAttribute("aria-pressed","false"); eraser.textContent = "지우기";
-    eraser.addEventListener("click", function(){
-      selectedBuilding = (selectedBuilding==="__erase__") ? null : "__erase__";
-      Array.prototype.forEach.call(palEl.children, function(c){ c.setAttribute("aria-pressed","false"); });
-      if (selectedBuilding) eraser.setAttribute("aria-pressed","true");
-    });
-    palEl.appendChild(eraser);
-
-    var gridEl = document.getElementById("grid");
-    function renderGrid(){
-      gridEl.innerHTML = "";
-      for (var i=0;i<GRID_N*GRID_N;i++){
-        var cellVal = buildings[i];
-        var cell = document.createElement("button");
-        cell.className = "cell" + (cellVal? " filled":"");
-        var b = cellVal ? BUILDINGS.filter(function(x){return x.id===cellVal;})[0] : null;
-        cell.textContent = b ? b.icon : "";
-        (function(idx){
-          cell.addEventListener("click", function(){
-            var oldVal = buildings[idx], hadGrid = !!state.buildings[r.code];
-            if (selectedBuilding === "__erase__"){ buildings[idx] = null; }
-            else if (selectedBuilding){ buildings[idx] = selectedBuilding; }
-            else { return; }
-            state.buildings[r.code] = buildings;
-            if (!saveState()){ buildings[idx] = oldVal; if (!hadGrid) delete state.buildings[r.code]; } // 저장 실패 → 되돌림
-            renderGrid();
-          });
-        })(i);
-        gridEl.appendChild(cell);
-      }
-    }
-    renderGrid();
   }
 
   /* ---------------- 도감 ---------------- */
