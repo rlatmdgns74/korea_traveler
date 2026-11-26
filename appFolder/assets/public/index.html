@@ -661,6 +661,7 @@
 <script src="data/sido.js"></script>
 <script src="data/sub.js"></script>
 <script src="data/challenge.js"></script>
+<script src="data/guide.js"></script>
 <script>
 (function(){
   "use strict";
@@ -672,7 +673,8 @@
   }
   var IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
 
-  var STATE_KEY = "kr-traveler-state-v4";
+  var STATE_KEY = "kr-traveler-state-v5";
+  var STATE_KEY_V4 = "kr-traveler-state-v4"; // 이전 버전(퀘스트 기록 없음). 지우지 않고 백업으로 남긴다.
   var STATE_KEY_V3 = "kr-traveler-state-v3"; // 이전 버전(전국 230곳). 지우지 않고 백업으로 남긴다.
   var STATE_KEY_V2 = "kr-traveler-state-v2"; // 이전 버전(강원만 세분화). 지우지 않고 백업으로 남긴다.
   var STATE_KEY_V1 = "kr-traveler-state-v1"; // 그 이전 버전(시·도 단위). 지우지 않고 백업으로 남긴다.
@@ -740,7 +742,7 @@
   /* ---------------- state ----------------
      v3 = { version:3, home, unlocks{code:{at,lon,lat,acc,test,via}}, posts{}, buildings{}, legacy{} }
      하위 지역이 있는 시·도 코드로 남은 포스트·건물은 그 시·도 코드 그대로 보존한다 (지금은 화면에 표시하지 않음). */
-  function emptyState(){ return { version:4, home:null, unlocks:{}, posts:{}, buildings:{}, legacy:{} }; }
+  function emptyState(){ return { version:5, home:null, unlocks:{}, quests:{}, posts:{}, buildings:{}, legacy:{} }; }
 
   // v1 시·도 코드(통계청 옛 코드) -> 지금 코드 (광주 24 는 전남광주 안의 '광주' 1곳 12000 으로)
   var V1_CODE_MAP = {
@@ -881,23 +883,32 @@
   }
 
   function normalizeState(s){
-    if (!s || typeof s !== "object" || s.version !== 4) s = emptyState();
+    if (!s || typeof s !== "object" || s.version !== 5) s = emptyState();
     s.unlocks = s.unlocks || {};
+    s.quests = s.quests || {};
     s.posts = s.posts || {};
     s.buildings = s.buildings || {};
     s.legacy = s.legacy || {};
     return s;
   }
-  // 어떤 버전의 상태든 v4 로 맞춘다 (불러오기·백업 복원 공용)
+  // v4 -> v5: 가이드 퀘스트 기록(quests) 칸만 더한다. 해금·포스트·건물·이전 기록은 그대로
+  function migrateV4(v4){
+    var s = JSON.parse(JSON.stringify(v4));
+    s.version = 5;
+    s.quests = {};
+    return s;
+  }
+  // 어떤 버전의 상태든 v5 로 맞춘다 (불러오기·백업 복원 공용)
   function upgradeState(s){
-    if (s && s.version === 4) return normalizeState(s);
+    if (s && s.version === 5) return normalizeState(s);
+    if (s && s.version === 4) return normalizeState(migrateV4(s));
     if (s && s.version === 3) return normalizeState(migrateV3(s));
     if (s && s.version === 2) return normalizeState(migrateV2(s));
     if (s && Array.isArray(s.unlocked)) return normalizeState(migrateV1(s));
     throw new Error("format");
   }
   function loadState(){
-    var keys = [STATE_KEY, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1];
+    var keys = [STATE_KEY, STATE_KEY_V4, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1];
     for (var i=0;i<keys.length;i++){
       try{
         var raw = localStorage.getItem(keys[i]);
@@ -2427,7 +2438,7 @@
     applyBtn.addEventListener("click", function(){
       if (input.value.trim() !== RESET_WORD) return;
       if (wipeAll){
-        [STATE_KEY, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, "kr-traveler-state-v3-prev", "kr-traveler-state-v2-prev", PREFS_KEY].forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+        [STATE_KEY, STATE_KEY_V4, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, "kr-traveler-state-v3-prev", "kr-traveler-state-v2-prev", PREFS_KEY].forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
         location.reload();
         return;
       }
@@ -2464,7 +2475,7 @@
     });
     document.getElementById("btnDevWipe").addEventListener("click", function(){ renderResetSheet(true); });
     document.getElementById("btnDevState").addEventListener("click", function(){
-      var keys = [STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, PREFS_KEY].map(function(k){
+      var keys = [STATE_KEY_V4, STATE_KEY_V3, STATE_KEY_V2, STATE_KEY_V1, STATE_KEY_PREV, PREFS_KEY].map(function(k){
         var has = false; try{ has = localStorage.getItem(k) !== null; }catch(e){}
         return k+": "+(has ? "있음" : "없음");
       }).join(" · ");
@@ -2504,7 +2515,7 @@
 
   // 자동 점검용 — dev 빌드에서만 노출
   if (DEV){
-    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
+    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, migrateV4:migrateV4, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
                     REG:REG, UNITS:UNITS, state:function(){ return state; },
                     devMode:function(){ return devMode; }, simulatedPoint:function(){ return simulatedPoint; } };
   }
