@@ -346,7 +346,7 @@
   .mascot-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
   .mascot-tile{ border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--ink); text-align:center; }
   .mascot-tile b{ font-size:14px; }
-  .mascot-tile span{ font-size:11.5px; color:var(--ink-soft); }
+  .mascot-tile .mascot-sub{ font-size:11.5px; color:var(--ink-soft); }
 
   /* ---------- 챌린지 ---------- */
   .chal-list{ display:flex; flex-direction:column; gap:10px; }
@@ -1881,7 +1881,7 @@
       closeSheet();
       renderMap();
       refreshSideViews();
-      showStamp(q.place, unlockToo ? "unlock" : "quest");
+      showStamp(unlockToo ? r.name : q.place, unlockToo ? "unlock" : "quest");
       setTimeout(function(){ if (!scrimEl && isUnlocked(code)) renderUnlockedSheet(r, code === state.home, unlockToo); }, 1900);
       return true;
     });
@@ -1902,7 +1902,7 @@
         return '<button class="mascot-tile'+(ok ? '' : ' unmet')+'" data-code="'+code+'">'+
           mascotFace(g.mascot, ok)+
           '<b>'+(ok ? escapeHtml(g.mascot.name) : '???')+'</b>'+
-          '<span>'+escapeHtml(r ? r.name : code)+' · 퀘스트 '+questDoneCount(code)+'/'+g.quests.length+'</span>'+
+          '<span class="mascot-sub">'+escapeHtml(r ? r.name : code)+' · 퀘스트 '+questDoneCount(code)+'/'+g.quests.length+'</span>'+
         '</button>';
       }).join("")+'</div>';
   }
