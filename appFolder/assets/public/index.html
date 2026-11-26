@@ -635,6 +635,7 @@
     <div class="set-btns">
       <button class="btn btn-secondary" id="btnExport">⬆️ 백업 내보내기</button>
       <button class="btn btn-secondary" id="btnImport">⬇️ 백업 복원</button>
+      <button class="btn btn-secondary" id="btnBetaReport">🧾 베타 리포트 복사</button>
     </div>
   </div>
 
@@ -2505,6 +2506,30 @@
       throw new Error("copy failed");
     });
   }
+  // 베타 리포트: 강원 시범 결과를 설문 폼에 붙여 넣을 짧은 텍스트. 좌표·정확도는 넣지 않는다 (위치를 기기 밖으로 보내지 않는 원칙)
+  function betaReport(){
+    var lines = ["[코리아 트래블러 베타 리포트] 앱 "+APP_VERSION+" · "+fmtDate(Date.now()), "전체 해금: "+unlockedUnitCount()+" / "+TOTAL_UNITS];
+    guideCodes().forEach(function(code){
+      var g = guideFor(code), r = regionByCode(code), u = state.unlocks[code];
+      var qs = g.quests.map(function(q){ var d = state.quests[q.id]; return q.id.split("_").pop()+":"+(d ? (fmtDate(d.at) || "날짜없음")+(d.test ? "(테스트)" : "") : "-"); });
+      lines.push((r ? r.name : code)+" | 해금 "+(u ? (fmtDate(u.at) || "날짜없음")+(u.test ? "(테스트)" : "") : "-")+" | 퀘스트 "+qs.join(" "));
+    });
+    return lines.join("\n");
+  }
+  function renderBetaReportSheet(){
+    var text = betaReport();
+    openSheet(
+      sheetHead("베타 리포트", "강원 시범 결과")+
+      '<p class="set-note">아래 내용을 복사해 베타 설문에 붙여 넣어주세요. 위치 좌표는 들어 있지 않아요.</p>'+
+      '<textarea id="betaText" readonly></textarea>'+
+      '<button class="btn btn-primary" id="betaCopy">📋 복사하기</button>');
+    var ta = document.getElementById("betaText");
+    ta.value = text;
+    document.getElementById("betaCopy").addEventListener("click", function(){
+      copyText(text, ta).then(function(){ toast("베타 리포트를 복사했어요", "📋"); },
+                              function(){ toast("복사하지 못했어요. 텍스트를 길게 눌러 직접 복사해주세요", "⚠️"); });
+    });
+  }
   // 덮어쓰기 직전 상태를 한 단계 보관한다. 저장 공간이 없으면 false — 이때는 덮어쓰지 않는다.
   function keepPrev(){
     try{ localStorage.setItem(STATE_KEY_PREV, JSON.stringify({ savedAt:new Date().toISOString(), state:state })); return true; }
@@ -2620,6 +2645,7 @@
   }
 
   document.getElementById("btnExport").addEventListener("click", renderExportSheet);
+  document.getElementById("btnBetaReport").addEventListener("click", renderBetaReportSheet);
   document.getElementById("btnImport").addEventListener("click", renderImportSheet);
   document.getElementById("btnReset").addEventListener("click", function(){ renderResetSheet(false); });
 
@@ -2686,7 +2712,7 @@
 
   // 자동 점검용 — dev 빌드에서만 노출
   if (DEV){
-    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, migrateV4:migrateV4, checkQuest:checkQuest, openRegion:openRegion, distanceM:distanceM, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
+    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, migrateV4:migrateV4, checkQuest:checkQuest, openRegion:openRegion, distanceM:distanceM, betaReport:betaReport, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
                     REG:REG, UNITS:UNITS, state:function(){ return state; },
                     devMode:function(){ return devMode; }, simulatedPoint:function(){ return simulatedPoint; } };
   }

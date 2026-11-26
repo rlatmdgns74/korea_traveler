@@ -114,6 +114,13 @@
   - `via`: gps | sim(가상 위치) | dbltap | list(목록 즉시 해금) | dev-all | v1
 - 개발용 서버: `node C:\NewBusiness\tools\devserver.js` → http://localhost:5179 (file://로 열면 data/*.js·localStorage가 안 됨)
 
+### 강원 시범 (2026-11-26, 브랜치 gangwon-pilot)
+- 계획: `docs/2026-11-26-gangwon-pilot-plan.md`, 글 초안: `docs/2026-11-26-gangwon-pilot-content-draft.md`
+- 콘텐츠: `assets/public/data/guide.js` (`var GUIDE = {코드: {mascot, preview, quests[3]}}`, 손으로 관리). 고친 뒤 `node tools/check-guide.mjs` 로 검사 (코드·구성·반경·인증 지점이 시·군 경계 안인지). `temp:true` 좌표는 임시
+- **저장 v5**: `kr-traveler-state-v5` = v4 + `quests{퀘스트ID:{at,lon,lat,acc,test,via}}`. `migrateV4` 는 quests 만 더한다. 불러오기 순서 v5→v4→v3→v2→v1, 이전 키는 지우지 않는다
+- 마스코트는 해금 기록에서 계산(저장 안 함). 퀘스트 인증: 정확도 100m + 인증 지점 반경(200m). 시·군이 잠겨 있고 그 안에 있으면 해금도 함께
+- 화면: `guideHtml`(지역 시트), `checkQuest`, `renderMascotDex`(도감 위), 설정 › 베타 리포트 복사(`betaReport`, 좌표 없음)
+
 ### 알려진 문제 (수정 백로그 후보)
 - 지역명 구식: `강원도`(→ 강원특별자치도, 2023), `전라북도`(→ 전북특별자치도, 2024)
 - GPS 정확도(`accuracy`) 검사 없음, 모의 위치(위치 조작) 검사 없음, 이동 속도 검사 없음
