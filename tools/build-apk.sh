@@ -26,7 +26,7 @@ grep -qxF "$MODE_LINE" "$SRC/$HTML" || { echo "원본 index.html 에서 BUILD_MO
 
 rm -rf "$WORK"; mkdir -p "$WORK" "$DIST"
 # apktool 작업 폴더(build/)는 복사하지 않는다
-(cd "$SRC" && tar --exclude='./build' -cf - .) | (cd "$WORK" && tar -xf -)
+(cd "$SRC" && tar --exclude='./build' --exclude='receipts' --exclude='review-receipts' -cf - .) | (cd "$WORK" && tar -xf -)
 
 sed -i "s/^  var BUILD_MODE = \"dev\";$/  var BUILD_MODE = \"$MODE\";/" "$WORK/$HTML"
 grep -qxF "  var BUILD_MODE = \"$MODE\";" "$WORK/$HTML" || { echo "BUILD_MODE 를 $MODE 로 바꾸지 못했어요" >&2; exit 1; }
