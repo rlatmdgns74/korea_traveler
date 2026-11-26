@@ -321,6 +321,33 @@
   .dex-row .region-tag{ grid-area:tag; }
   .dex-row:not(.done) .dex-name{ color:var(--ink-soft); }
 
+  /* ---------- 강원 시범: 마스코트·가이드 퀘스트 ---------- */
+  .mascot-card{ display:flex; gap:14px; align-items:center; background:var(--unlocked-soft); border-radius:var(--radius); padding:14px; }
+  .mascot-card.unmet{ background:var(--locked-soft); }
+  .mascot-face{ flex:none; width:64px; height:64px; border-radius:50%; background:var(--paper); display:flex; align-items:center; justify-content:center; font-size:36px; box-shadow:var(--shadow); overflow:hidden; }
+  .mascot-face img{ width:100%; height:100%; object-fit:cover; }
+  .mascot-face.unmet{ filter:grayscale(1) brightness(.35); opacity:.6; }
+  .mascot-text{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .mascot-text h3{ font-size:18px; }
+  .mascot-text p{ font-size:13px; color:var(--ink-soft); line-height:1.55; }
+  .quest-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .quest-head h3{ font-size:16px; }
+  .quest-list{ display:flex; flex-direction:column; gap:10px; }
+  .quest-row{ border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; display:flex; flex-direction:column; gap:6px; background:var(--paper); }
+  .quest-row.done{ border-color:var(--unlocked); background:var(--unlocked-soft); }
+  .quest-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .quest-kind{ font-size:12px; font-weight:700; color:var(--ink-soft); }
+  .quest-row h3{ font-size:15px; }
+  .quest-place{ font-size:12.5px; color:var(--ink-soft); font-weight:700; }
+  .quest-text{ font-size:13px; line-height:1.6; }
+  .quest-date{ font-size:12px; color:var(--unlocked-ink); font-weight:700; }
+  .mascot-dex{ display:flex; flex-direction:column; gap:10px; }
+  .mascot-dex h3{ font-size:16px; }
+  .mascot-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+  .mascot-tile{ border:1px solid var(--line); background:var(--paper); border-radius:var(--radius); padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--ink); text-align:center; }
+  .mascot-tile b{ font-size:14px; }
+  .mascot-tile span{ font-size:11.5px; color:var(--ink-soft); }
+
   /* ---------- 챌린지 ---------- */
   .chal-list{ display:flex; flex-direction:column; gap:10px; }
   .chal-card{
@@ -353,6 +380,7 @@
     box-shadow:0 0 0 3px color-mix(in srgb, var(--ink-stamp) 25%, transparent) inset;
   }
   .stamp-test .stamp, .stamp-challenge .stamp{ --ink-stamp:var(--gold); }
+  .stamp-quest .stamp{ --ink-stamp:var(--unlocked-ink); }
   .stamp-top{ font:700 10px/1 'Space Mono',monospace; letter-spacing:.12em; opacity:.85; }
   .stamp-name{ font-size:26px; line-height:1.15; word-break:keep-all; max-width:150px; }
   .stamp-label{ font-size:18px; border-top:2px solid var(--ink-stamp); border-bottom:2px solid var(--ink-stamp); padding:1px 10px; }
@@ -566,6 +594,7 @@
     <h2 class="settings-title">도감</h2>
     <span class="view-sub mono" id="dexSummary"></span>
   </div>
+  <div class="mascot-dex" id="mascotDex" hidden></div>
   <input class="dex-search" id="dexSearch" type="search" placeholder="지역 이름으로 찾기 (예: 과천, 해운대)" autocomplete="off" aria-label="지역 이름으로 찾기">
   <div class="dex-list" id="dexList"></div>
 </section>
@@ -1678,9 +1707,11 @@
       '<p style="color:var(--ink-soft); font-size:13px; line-height:1.6;">이 지역은 아직 방문하지 않았어요. 실제로 '+escapeHtml(r.name)+'에 가서 위치를 확인하면 바로 '+(r.challenge ? '챌린지 성공이에요.' : '열려요.')+'</p>'+
       (DEV && devMode ? '<button class="btn btn-secondary btn-dev" id="devHereBtn">🧪 여기로 가상 이동</button>' : '')+
       '<button class="btn btn-primary" id="checkHereBtn">🧭 지금 여기 있는지 확인하기</button>'+
-      '<p class="status-line" id="lockedStatus"></p>';
+      '<p class="status-line" id="lockedStatus"></p>'+
+      guideHtml(r.code, false);
     openSheet(html);
     document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    bindQuestButtons(r);
     var devHereBtn = document.getElementById("devHereBtn");
     if (devHereBtn) devHereBtn.addEventListener("click", function(){
       if (!moveSimulatedTo(r.code)) return;
@@ -1724,10 +1755,13 @@
     }
     closeSheet();
     showStamp(r.name, r.challenge ? "challenge" : "unlock");
+    // 시범 권역이면 도장이 끝난 뒤 마스코트를 소개한다
+    if (guideFor(r.code)) setTimeout(function(){ if (!scrimEl) renderUnlockedSheet(r, r.code === state.home, true); }, 1900);
   }
 
-  // 해금된 지역: 이름, 홈 여부, 해금 날짜만 간단히
-  function renderUnlockedSheet(r, isHome){
+  // 해금된 지역: 이름, 홈 여부, 해금 날짜 (+ 시범 권역이면 마스코트와 가이드 퀘스트)
+  // fresh: 방금 해금해서 마스코트를 처음 만난 경우
+  function renderUnlockedSheet(r, isHome, fresh){
     var u = state.unlocks[r.code];
     var html =
       '<div class="sheet-head"><div>'+
@@ -1735,10 +1769,146 @@
         '<h2 style="margin-top:6px;">'+r.name+'</h2>'+
         '<div class="coord mono">'+escapeHtml(regionSubtitle(r))+'</div>'+
       '</div><button class="close-x" id="closeBtn">✕</button></div>'+
-      '<p class="unlock-date">📅 '+escapeHtml(unlockDateText(u))+'</p>';
+      '<p class="unlock-date">📅 '+escapeHtml(unlockDateText(u))+'</p>'+
+      guideHtml(r.code, true, fresh);
     openSheet(html);
     document.getElementById("closeBtn").addEventListener("click", closeSheet);
+    bindQuestButtons(r);
   }
+
+  /* ---------------- 강원 시범: 마스코트·가이드 퀘스트 (data/guide.js) ----------------
+     - 마스코트는 해금 기록에서 바로 계산한다 (따로 저장하지 않음)
+     - 퀘스트 완료는 state.quests[퀘스트ID] = {at, lon, lat, acc, test, via}
+     - 인증: 위치 정확도 100m 이내(poorAccuracy) + 인증 지점 반경(radius, 기본 200m) 안
+     - 그 시·군이 아직 잠겨 있고 지금 위치가 그 시·군 안이면 해금도 함께 처리한다 (해금 조건은 그대로) */
+  var QUEST_KIND = { spot:"📍 명소", food:"🍜 먹거리", story:"📖 이야기" };
+  function guideFor(code){ return (typeof GUIDE === "object" && GUIDE && GUIDE[code]) || null; }
+  function guideCodes(){ return (typeof GUIDE === "object" && GUIDE) ? Object.keys(GUIDE) : []; }
+  function distanceM(lon1, lat1, lon2, lat2){
+    var R = 6371000, toRad = Math.PI / 180;
+    var dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*toRad) * Math.cos(lat2*toRad) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+  function mascotFace(m, met){
+    var inner = m.img ? '<img src="'+escapeHtml(m.img)+'" alt="">' : escapeHtml(m.emoji || "⭐");
+    return '<span class="mascot-face'+(met ? '' : ' unmet')+'" aria-hidden="true">'+inner+'</span>';
+  }
+  function questDoneCount(code){
+    var g = guideFor(code);
+    return g ? g.quests.filter(function(q){ return state.quests[q.id]; }).length : 0;
+  }
+  // 지역 시트 안의 마스코트 카드 + 퀘스트 목록 (잠긴 지역은 미리보기)
+  function guideHtml(code, met, fresh){
+    var g = guideFor(code);
+    if (!g) return "";
+    var m = g.mascot;
+    var card =
+      '<div class="mascot-card'+(met ? '' : ' unmet')+'">'+
+        mascotFace(m, met)+
+        '<div class="mascot-text">'+
+          (fresh ? '<span class="region-tag tag-home">🎉 새 친구를 만났어요</span>' : '')+
+          '<h3>'+(met ? escapeHtml(m.name) : '???')+'</h3>'+
+          '<p>'+escapeHtml(met ? m.intro : g.preview)+'</p>'+
+        '</div>'+
+      '</div>';
+    var list = g.quests.map(function(q){
+      var done = state.quests[q.id];
+      return '<div class="quest-row'+(done ? ' done' : '')+'">'+
+        '<div class="quest-top"><span class="quest-kind">'+QUEST_KIND[q.kind]+'</span>'+
+          (done ? '<span class="region-tag '+(done.test ? 'tag-test' : 'tag-unlocked')+'">'+(done.test ? '🧪 테스트 완료' : '✅ 완료')+'</span>' : '')+'</div>'+
+        '<h3>'+escapeHtml(q.title)+'</h3>'+
+        '<p class="quest-place">'+escapeHtml(q.place)+'</p>'+
+        (met ? '<p class="quest-text">'+escapeHtml(q.text)+'</p>' : '')+
+        (done ? '<p class="quest-date">'+escapeHtml(fmtDate(done.at) || '')+' 완료</p>' :
+          (DEV && devMode ? '<button class="btn btn-secondary btn-dev" data-quest-sim="'+q.id+'">🧪 이 지점으로 가상 이동</button>' : '')+
+          '<button class="btn btn-secondary" data-quest="'+q.id+'">🙋 여기 왔어요</button>')+
+      '</div>';
+    }).join("");
+    return card +
+      '<div class="quest-head"><h3>'+(met ? escapeHtml(m.name)+'의 가이드 퀘스트' : '가이드 퀘스트 미리보기')+'</h3><span class="mono view-sub">'+questDoneCount(code)+' / '+g.quests.length+'</span></div>'+
+      '<div class="quest-list">'+list+'</div>'+
+      '<p class="status-line" id="questStatus"></p>';
+  }
+  function bindQuestButtons(r){
+    if (!guideFor(r.code)) return;
+    var sheet = scrimEl && scrimEl.querySelector(".sheet");
+    if (!sheet) return;
+    sheet.addEventListener("click", function(e){
+      var sim = e.target.closest("[data-quest-sim]");
+      if (sim){
+        var q = questById(r.code, sim.getAttribute("data-quest-sim"));
+        if (q && DEV && devMode){ simulatedPoint = [q.lon, q.lat]; document.getElementById("questStatus").textContent = "가상 위치를 "+q.place+"(으)로 옮겼어요."; }
+        return;
+      }
+      var b = e.target.closest("[data-quest]");
+      if (b) checkQuest(r.code, b.getAttribute("data-quest"));
+    });
+  }
+  function questById(code, id){
+    var g = guideFor(code);
+    if (!g) return null;
+    for (var i=0;i<g.quests.length;i++) if (g.quests[i].id === id) return g.quests[i];
+    return null;
+  }
+  function checkQuest(code, id){
+    var r = regionByCode(code), q = questById(code, id);
+    var statusEl = document.getElementById("questStatus") || { textContent:"" };
+    if (!r || !q || state.quests[id]) return Promise.resolve(false);
+    statusEl.textContent = "위치 확인 중...";
+    return currentPositionAsync().then(function(pos){
+      if (!pos){ statusEl.textContent = geoFailMessage(); return false; }
+      var poor = poorAccuracy(pos);
+      if (poor){ statusEl.textContent = poorAccuracyMessage(poor); return false; }
+      var lon = pos.coords.longitude, lat = pos.coords.latitude;
+      var d = distanceM(lon, lat, q.lon, q.lat);
+      if (d > (q.radius || 200)){
+        statusEl.textContent = q.place+"에서 약 "+(d >= 1000 ? (d/1000).toFixed(1)+"km" : Math.round(d)+"m")+" 떨어져 있어요. 인증 지점 "+(q.radius || 200)+"m 안에서 다시 확인해주세요.";
+        return false;
+      }
+      var hereUnit = findRegionForPoint(lon, lat);
+      var unlockToo = !isUnlocked(code) && hereUnit && hereUnit.code === code;
+      var c = pos.coords, simulated = !!pos.simulated;
+      state.quests[id] = { at:Date.now(), lon:c.longitude, lat:c.latitude, acc:(typeof c.accuracy === "number") ? c.accuracy : null, test:simulated, via:simulated ? "sim" : "gps" };
+      if (unlockToo) recordUnlock(code, pos);
+      if (!saveStateQuiet()){
+        delete state.quests[id];
+        if (unlockToo) delete state.unlocks[code];
+        statusEl.textContent = "기기 저장 공간이 부족해 저장하지 못했어요. 설정 › 데이터 백업으로 기록을 보관한 뒤 다시 시도해주세요.";
+        return false;
+      }
+      closeSheet();
+      renderMap();
+      refreshSideViews();
+      showStamp(q.place, unlockToo ? "unlock" : "quest");
+      setTimeout(function(){ if (!scrimEl && isUnlocked(code)) renderUnlockedSheet(r, code === state.home, unlockToo); }, 1900);
+      return true;
+    });
+  }
+
+  // 도감 위쪽: 시범 권역 마스코트 모음
+  function renderMascotDex(){
+    var el = document.getElementById("mascotDex");
+    var codes = guideCodes();
+    if (!el) return;
+    if (!codes.length){ el.hidden = true; return; }
+    var met = codes.filter(isUnlocked).length;
+    el.hidden = false;
+    el.innerHTML =
+      '<div class="view-head"><h3>강원 시범 마스코트</h3><span class="view-sub mono">'+met+' / '+codes.length+'</span></div>'+
+      '<div class="mascot-grid">'+codes.map(function(code){
+        var g = guideFor(code), r = regionByCode(code), ok = isUnlocked(code);
+        return '<button class="mascot-tile'+(ok ? '' : ' unmet')+'" data-code="'+code+'">'+
+          mascotFace(g.mascot, ok)+
+          '<b>'+(ok ? escapeHtml(g.mascot.name) : '???')+'</b>'+
+          '<span>'+escapeHtml(r ? r.name : code)+' · 퀘스트 '+questDoneCount(code)+'/'+g.quests.length+'</span>'+
+        '</button>';
+      }).join("")+'</div>';
+  }
+  document.getElementById("mascotDex").addEventListener("click", function(e){
+    var b = e.target.closest(".mascot-tile");
+    if (b) openRegion(b.getAttribute("data-code"));
+  });
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; });
@@ -1769,6 +1939,7 @@
   function renderDex(){
     var q = document.getElementById("dexSearch").value.trim();
     if (!dexInitDone){ var hs = homeSidoCode(); if (hs) dexOpen[hs] = true; dexInitDone = true; }
+    renderMascotDex();
     var n = unlockedUnitCount();
     document.getElementById("dexSummary").textContent = n+" / "+TOTAL_UNITS+" 해금";
     var html = SIDO.map(function(s){
@@ -1829,7 +2000,7 @@
   /* ---------------- 해금 도장 연출 (2초 이내) ---------------- */
   // kind: "unlock" | "home" | "test" | "challenge"
   function showStamp(name, kind){
-    var LABEL = { unlock:"해금", home:"여행 시작", test:"TEST", challenge:"챌린지 성공" };
+    var LABEL = { unlock:"해금", home:"여행 시작", test:"TEST", challenge:"챌린지 성공", quest:"퀘스트 완료" };
     var old = document.querySelector(".stamp-wrap");
     if (old) old.remove();
     var wrap = document.createElement("div");
@@ -2515,7 +2686,7 @@
 
   // 자동 점검용 — dev 빌드에서만 노출
   if (DEV){
-    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, migrateV4:migrateV4, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
+    window.__kt = { pickSample:pickSample, pickTarget:pickTarget, pickExclusions:pickExclusions, rnd:rnd, migrateV1:migrateV1, migrateV2:migrateV2, migrateV3:migrateV3, migrateV4:migrateV4, checkQuest:checkQuest, openRegion:openRegion, distanceM:distanceM, findChallengeForPoint:findChallengeForPoint, showStamp:showStamp, storageUsageBytes:storageUsageBytes, CHALLENGES:CHALLENGES, upgradeState:upgradeState, findRegionForPoint:findRegionForPoint, parseBackup:parseBackup,
                     REG:REG, UNITS:UNITS, state:function(){ return state; },
                     devMode:function(){ return devMode; }, simulatedPoint:function(){ return simulatedPoint; } };
   }
